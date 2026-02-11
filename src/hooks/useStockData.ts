@@ -1,0 +1,144 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+export function useProducts() {
+  return useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("item_code");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useWarehouses() {
+  return useQuery({
+    queryKey: ["warehouses"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("warehouses")
+        .select("*")
+        .order("warehouse_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useStockLevels() {
+  return useQuery({
+    queryKey: ["stock_levels"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_levels")
+        .select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useStockMovements() {
+  return useQuery({
+    queryKey: ["stock_movements"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select("*, products(item_code, item_description), warehouses(warehouse_name)")
+        .order("movement_date", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useAddProducts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      products: { category: string | null; item_code: string; item_description: string | null }[]
+    ) => {
+      const { data, error } = await supabase
+        .from("products")
+        .upsert(products, { onConflict: "item_code", ignoreDuplicates: true })
+        .select();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock_levels"] });
+    },
+  });
+}
+
+export function useAddStockMovement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (movement: {
+      product_id: string;
+      warehouse_id: string;
+      movement_type: string;
+      quantity: number;
+      reference_note?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .insert(movement)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stock_movements"] });
+      queryClient.invalidateQueries({ queryKey: ["stock_levels"] });
+    },
+  });
+}
+
+export function useTransferStock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (transfer: {
+      product_id: string;
+      from_warehouse_id: string;
+      to_warehouse_id: string;
+      quantity: number;
+      reference_note?: string;
+    }) => {
+      // Insert TRANSFER_OUT from source
+      const { error: outError } = await supabase
+        .from("stock_movements")
+        .insert({
+          product_id: transfer.product_id,
+          warehouse_id: transfer.from_warehouse_id,
+          movement_type: "TRANSFER_OUT",
+          quantity: transfer.quantity,
+          reference_note: transfer.reference_note,
+        });
+      if (outError) throw outError;
+
+      // Insert TRANSFER_IN to destination
+      const { error: inError } = await supabase
+        .from("stock_movements")
+        .insert({
+          product_id: transfer.product_id,
+          warehouse_id: transfer.to_warehouse_id,
+          movement_type: "TRANSFER_IN",
+          quantity: transfer.quantity,
+          reference_note: transfer.reference_note,
+        });
+      if (inError) throw inError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stock_movements"] });
+      queryClient.invalidateQueries({ queryKey: ["stock_levels"] });
+    },
+  });
+}
