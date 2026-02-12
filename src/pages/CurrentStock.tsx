@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useProducts, useStockLevels, useWarehouses } from "@/hooks/useStockData";
+import { Input } from "@/components/ui/input";
 
 export default function CurrentStock() {
   const { data: products, isLoading: productsLoading } = useProducts();
@@ -6,6 +8,8 @@ export default function CurrentStock() {
   const { data: warehouses, isLoading: warehousesLoading } = useWarehouses();
 
   const isLoading = productsLoading || stockLoading || warehousesLoading;
+
+  const [search, setSearch] = useState("");
 
   // Index stock by product+warehouse for fast lookup
   const stockIndex = new Map<string, number>();
@@ -20,14 +24,46 @@ export default function CurrentStock() {
     (a.item_code || "").localeCompare(b.item_code || "")
   );
 
+  const searchTerm = search.trim().toLowerCase();
+  const filteredProducts =
+    searchTerm.length === 0
+      ? sortedProducts
+      : sortedProducts.filter((p: any) => {
+          const code = (p.item_code || "").toString().toLowerCase();
+          const desc = (p.item_description || "").toString().toLowerCase();
+          const category = (p.category || "").toString().toLowerCase();
+          return (
+            code.includes(searchTerm) ||
+            desc.includes(searchTerm) ||
+            category.includes(searchTerm)
+          );
+        });
+
+  const hasAnyStockForFilter =
+    warehouses?.some((w: any) =>
+      filteredProducts.some((p: any) => {
+        const key = `${p.id}-${w.id}`;
+        const stock = stockIndex.get(key) ?? 0;
+        return stock > 0;
+      }),
+    ) ?? false;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3 mb-2">
+      <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
             Snapshot
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">Current Stock</h1>
+        </div>
+        <div className="w-full sm:w-auto sm:min-w-[260px]">
+          <Input
+            placeholder="Search by code or description…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 text-sm"
+          />
         </div>
       </div>
 
@@ -39,16 +75,26 @@ export default function CurrentStock() {
         <div className="rounded-2xl border border-border/70 bg-card/95 p-8 text-center text-sm text-muted-foreground">
           To see current stock, add at least one warehouse and one product.
         </div>
+      ) : !hasAnyStockForFilter ? (
+        <div className="rounded-2xl border border-border/70 bg-card/95 p-8 text-center text-sm text-muted-foreground">
+          {searchTerm
+            ? `No stock found matching “${search}”.`
+            : "No stock on hand in any warehouse."}
+        </div>
       ) : (
         <div className="space-y-5">
           {warehouses.map((w: any) => {
-            // Compute number of SKUs with positive stock in this warehouse
-            const activeSkuCount =
-              sortedProducts.filter((p: any) => {
-                const key = `${p.id}-${w.id}`;
-                const value = stockIndex.get(key) ?? 0;
-                return value > 0;
-              }).length || 0;
+            // Compute SKUs with positive stock in this warehouse
+            const productsWithStock = filteredProducts.filter((p: any) => {
+              const key = `${p.id}-${w.id}`;
+              const value = stockIndex.get(key) ?? 0;
+              return value > 0;
+            });
+
+            const activeSkuCount = productsWithStock.length;
+
+            // Skip warehouses that have no stock for the current filter
+            if (activeSkuCount === 0) return null;
 
             return (
               <div
@@ -62,7 +108,7 @@ export default function CurrentStock() {
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {activeSkuCount} SKUs with stock &bull;{" "}
-                      {sortedProducts.length} total SKUs tracked
+                      {filteredProducts.length} matching SKUs
                     </p>
                   </div>
                 </div>
@@ -85,7 +131,7 @@ export default function CurrentStock() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedProducts.map((p: any) => {
+                      {productsWithStock.map((p: any) => {
                         const key = `${p.id}-${w.id}`;
                         const stock = stockIndex.get(key) ?? 0;
                         const colorClass =

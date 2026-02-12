@@ -46,6 +46,16 @@ export default function StockMovements() {
   const addMovement = useAddStockMovement();
   const transferStock = useTransferStock();
 
+  // Business rules:
+  // - Exactly one Picking Floor warehouse (by name).
+  // - Only the Picking Floor can dispatch (Issue / OUT).
+  // - Storage warehouses can only move stock to the Picking Floor (Transfer).
+  const pickingFloor = warehouses?.find(
+    (w: any) => w.warehouse_name?.toLowerCase() === "picking floor"
+  );
+  const storageWarehouses =
+    warehouses?.filter((w: any) => w.id !== pickingFloor?.id) ?? warehouses ?? [];
+
   const [modal, setModal] = useState<ModalType>(null);
   const [productId, setProductId] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
@@ -89,6 +99,14 @@ export default function StockMovements() {
         });
         toast.success("Stock received successfully");
       } else if (modal === "issue") {
+        if (!pickingFloor) {
+          toast.error("Configure a 'Picking Floor' warehouse in Master Data before issuing stock.");
+          return;
+        }
+        if (warehouseId !== pickingFloor.id) {
+          toast.error("Stock can only be issued from the Picking Floor.");
+          return;
+        }
         const currentStock = getStock(productId, warehouseId);
         if (qty > currentStock) {
           toast.error(`Insufficient stock. Current: ${currentStock}`);
@@ -103,8 +121,20 @@ export default function StockMovements() {
         });
         toast.success("Stock issued successfully");
       } else if (modal === "transfer") {
+        if (!pickingFloor) {
+          toast.error("Configure a 'Picking Floor' warehouse in Master Data before transferring stock.");
+          return;
+        }
         if (fromWarehouseId === toWarehouseId) {
           toast.error("Source and destination must be different");
+          return;
+        }
+        if (toWarehouseId !== pickingFloor.id) {
+          toast.error("Transfers must move stock into the Picking Floor.");
+          return;
+        }
+        if (fromWarehouseId === pickingFloor.id) {
+          toast.error("Transfers must start from a storage warehouse, not the Picking Floor.");
           return;
         }
         const currentStock = getStock(productId, fromWarehouseId);
@@ -150,6 +180,17 @@ export default function StockMovements() {
             Flow
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">Stock Movements</h1>
+          {pickingFloor ? (
+            <p className="mt-1 text-xs text-muted-foreground max-w-xl">
+              Dispatch is only allowed from the Picking Floor. Storage warehouses can transfer stock
+              into the Picking Floor, which then issues it out.
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-destructive max-w-xl">
+              Create a warehouse named &quot;Picking Floor&quot; in Master Data → Warehouses to enable
+              dispatch and transfers.
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Dialog open={modal === "receive"} onOpenChange={(o) => (o ? setModal("receive") : resetForm())}>
@@ -195,7 +236,7 @@ export default function StockMovements() {
               </DialogHeader>
               <MovementForm
                 products={products}
-                warehouses={warehouses}
+                warehouses={pickingFloor ? [pickingFloor] : []}
                 productId={productId}
                 setProductId={setProductId}
                 warehouseId={warehouseId}
@@ -227,7 +268,8 @@ export default function StockMovements() {
               </DialogHeader>
               <TransferForm
                 products={products}
-                warehouses={warehouses}
+                sourceWarehouses={storageWarehouses}
+                destinationWarehouses={pickingFloor ? [pickingFloor] : []}
                 productId={productId}
                 setProductId={setProductId}
                 fromWarehouseId={fromWarehouseId}
@@ -431,7 +473,8 @@ function MovementForm({
 // Transfer form
 function TransferForm({
   products,
-  warehouses,
+  sourceWarehouses,
+  destinationWarehouses,
   productId,
   setProductId,
   fromWarehouseId,
@@ -448,7 +491,8 @@ function TransferForm({
   currentStock,
 }: {
   products: any[] | undefined;
-  warehouses: any[] | undefined;
+  sourceWarehouses: any[] | undefined;
+  destinationWarehouses: any[] | undefined;
   productId: string;
   setProductId: (v: string) => void;
   fromWarehouseId: string;
@@ -489,7 +533,7 @@ function TransferForm({
               <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent>
-              {warehouses?.map((w) => (
+              {sourceWarehouses?.map((w) => (
                 <SelectItem key={w.id} value={w.id}>
                   {w.warehouse_name}
                 </SelectItem>
@@ -509,7 +553,7 @@ function TransferForm({
               <SelectValue placeholder="Destination" />
             </SelectTrigger>
             <SelectContent>
-              {warehouses?.map((w) => (
+              {destinationWarehouses?.map((w) => (
                 <SelectItem key={w.id} value={w.id}>
                   {w.warehouse_name}
                 </SelectItem>
