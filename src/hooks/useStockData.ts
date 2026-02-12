@@ -142,3 +142,42 @@ export function useTransferStock() {
     },
   });
 }
+
+export function useAddWarehouse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { warehouse_name: string }) => {
+      const { data, error } = await supabase
+        .from("warehouses")
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["warehouses"] });
+      queryClient.invalidateQueries({ queryKey: ["stock_levels"] });
+    },
+  });
+}
+
+export function useUpdateWarehouse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { id: string; warehouse_name: string }) => {
+      const { data, error } = await supabase
+        .from("warehouses")
+        .update({ warehouse_name: payload.warehouse_name })
+        .eq("id", payload.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["warehouses"] });
+      queryClient.invalidateQueries({ queryKey: ["stock_levels"] });
+    },
+  });
+}

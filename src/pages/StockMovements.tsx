@@ -143,9 +143,14 @@ export default function StockMovements() {
       : warehouseId);
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Stock Movements</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
+            Flow
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">Stock Movements</h1>
+        </div>
         <div className="flex items-center gap-2">
           <Dialog open={modal === "receive"} onOpenChange={(o) => (o ? setModal("receive") : resetForm())}>
             <DialogTrigger asChild>
@@ -244,61 +249,76 @@ export default function StockMovements() {
       </div>
 
       {/* Movements history */}
-      <div className="bg-card border rounded-md">
-        <div className="p-4 border-b">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Recent Movements
-          </h2>
+      <div className="bg-card/95 border border-border/70 rounded-2xl shadow-sm">
+        <div className="px-5 py-4 border-b border-border/70 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Recent Movements
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Chronological log of every stock transaction.
+            </p>
+          </div>
         </div>
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading...</div>
+          <div className="p-8 text-center text-muted-foreground text-sm">Loading movement history…</div>
         ) : !movements?.length ? (
-          <div className="p-8 text-center text-muted-foreground">
+          <div className="p-8 text-center text-muted-foreground text-sm">
             No movements yet. Use the buttons above to record stock movements.
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs">DATE</TableHead>
-                <TableHead className="text-xs">TYPE</TableHead>
-                <TableHead className="font-mono text-xs">ITEM CODE</TableHead>
-                <TableHead className="text-xs">WAREHOUSE</TableHead>
-                <TableHead className="text-xs text-right">QTY</TableHead>
-                <TableHead className="text-xs">NOTE</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {movements.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="text-sm font-mono text-muted-foreground">
-                    {new Date(m.movement_date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-block px-2 py-0.5 rounded text-xs font-mono font-medium ${
-                        movementTypeStyles[m.movement_type] ?? ""
-                      }`}
-                    >
-                      {m.movement_type}
-                    </span>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm font-medium">
-                    {(m.products as any)?.item_code}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {(m.warehouses as any)?.warehouse_name}
-                  </TableCell>
-                  <TableCell className="text-sm font-mono text-right font-medium">
-                    {m.quantity}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                    {m.reference_note || "—"}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">Date</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">Type</TableHead>
+                  <TableHead className="font-mono text-[11px] uppercase tracking-[0.18em]">
+                    Item Code
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">
+                    Warehouse
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em] text-right">
+                    Qty
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">
+                    Note
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {movements.map((m) => (
+                  <TableRow key={m.id} className="hover:bg-muted/40">
+                    <TableCell className="text-sm font-mono text-muted-foreground">
+                      {new Date(m.movement_date).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded text-xs font-mono font-medium ${
+                          movementTypeStyles[m.movement_type] ?? ""
+                        }`}
+                      >
+                        {m.movement_type}
+                      </span>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm font-medium">
+                      {(m.products as any)?.item_code}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {(m.warehouses as any)?.warehouse_name}
+                    </TableCell>
+                    <TableCell className="text-sm font-mono text-right font-medium">
+                      {m.quantity}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[220px] truncate">
+                      {m.reference_note || "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
     </div>

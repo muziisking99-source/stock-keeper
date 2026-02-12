@@ -28,107 +28,192 @@ export default function Dashboard() {
   });
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-6">Dashboard</h1>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
+            Live Snapshot
+          </p>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+            Control Tower
+          </h1>
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-mono uppercase tracking-[0.18em]">
+            Warehouses Synced: {totalWarehouses}
+          </span>
+        </div>
+      </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-card border rounded-md p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <Package className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">Total Products</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-sky-500/10 via-card/90 to-sky-400/5 p-5 shadow-sm">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-sky-400/15 blur-2xl" />
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+                <Package className="h-4 w-4" />
+              </div>
+              <div>
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  Total Products
+                </span>
+              </div>
+            </div>
+            <span className="rounded-full border border-sky-400/40 bg-sky-500/10 px-2 py-0.5 text-[10px] font-mono text-sky-200">
+              Catalog
+            </span>
           </div>
-          <p className="text-3xl font-bold font-mono">{totalProducts}</p>
+          <p className="text-3xl md:text-4xl font-semibold font-mono">{totalProducts}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Unique SKUs currently tracked across all warehouses.
+          </p>
         </div>
-        <div className="bg-card border rounded-md p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <Warehouse className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">Warehouses</span>
+
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-indigo-500/10 via-card/90 to-indigo-400/5 p-5 shadow-sm">
+          <div className="pointer-events-none absolute -left-8 -bottom-16 h-32 w-32 rounded-full bg-indigo-400/15 blur-2xl" />
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
+                <Warehouse className="h-4 w-4" />
+              </div>
+              <div>
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  Warehouses
+                </span>
+              </div>
+            </div>
+            <span className="rounded-full border border-indigo-400/40 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-mono text-indigo-200">
+              Network
+            </span>
           </div>
-          <p className="text-3xl font-bold font-mono">{totalWarehouses}</p>
+          <p className="text-3xl md:text-4xl font-semibold font-mono">{totalWarehouses}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Active storage locations participating in live stock sync.
+          </p>
         </div>
-        <div className="bg-card border rounded-md p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <AlertTriangle className="h-5 w-5 text-stock-transfer" />
-            <span className="text-sm font-medium text-muted-foreground">Low Stock Items</span>
+
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-amber-500/10 via-card/90 to-amber-400/5 p-5 shadow-sm">
+          <div className="pointer-events-none absolute right-[-14px] bottom-[-36px] h-32 w-32 rounded-full bg-amber-400/15 blur-2xl" />
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+              <div>
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  Low Stock Items
+                </span>
+              </div>
+            </div>
+            <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-mono text-amber-100">
+              Risk Watch
+            </span>
           </div>
-          <p className="text-3xl font-bold font-mono">{lowStockCount}</p>
+          <p className="text-3xl md:text-4xl font-semibold font-mono">{lowStockCount}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Items between 1–5 units remaining across any warehouse.
+          </p>
         </div>
       </div>
 
       {/* Stock table */}
-      <div className="bg-card border rounded-md">
-        <div className="p-4 border-b">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Stock Overview
-          </h2>
+      <div className="rounded-2xl border border-border/70 bg-card/95 shadow-sm">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border/70">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Stock Overview
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Per-warehouse visibility for every tracked SKU.
+            </p>
+          </div>
+          <div className="hidden md:flex items-center gap-2 text-[11px] text-muted-foreground/80 font-mono">
+            <span className="inline-flex h-2 w-2 rounded-full bg-stock-in" />
+            <span>Healthy</span>
+            <span className="inline-flex h-2 w-2 rounded-full bg-stock-transfer" />
+            <span>Low</span>
+            <span className="inline-flex h-2 w-2 rounded-full bg-stock-zero" />
+            <span>Zero</span>
+          </div>
         </div>
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading...</div>
+          <div className="p-10 text-center text-muted-foreground text-sm">Loading live inventory…</div>
         ) : totalProducts === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">
-            No products yet. Upload products via the Products page.
+          <div className="p-10 text-center text-muted-foreground text-sm">
+            No products yet. Upload products via the Products page to populate this view.
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="font-mono text-xs">ITEM CODE</TableHead>
-                <TableHead className="text-xs">DESCRIPTION</TableHead>
-                <TableHead className="text-xs">CATEGORY</TableHead>
-                {warehouses?.map((w) => (
-                  <TableHead key={w.id} className="text-xs text-center">
-                    {w.warehouse_name?.toUpperCase()}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/70">
+                  <TableHead className="font-mono text-[11px] uppercase tracking-[0.18em]">
+                    Item Code
                   </TableHead>
-                ))}
-                <TableHead className="text-xs text-center">TOTAL</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array.from(productMap.entries()).map(([productId, levels]) => {
-                const first = levels![0];
-                const total = levels!.reduce((sum, l) => sum + (l.current_stock as number), 0);
-                return (
-                  <TableRow key={productId}>
-                    <TableCell className="font-mono text-sm font-medium">
-                      {first.item_code}
-                    </TableCell>
-                    <TableCell className="text-sm">{first.item_description}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {first.category || "—"}
-                    </TableCell>
-                    {warehouses?.map((w) => {
-                      const level = levels!.find(
-                        (l) => l.warehouse_id === w.id
-                      );
-                      const stock = (level?.current_stock as number) ?? 0;
-                      return (
-                        <TableCell
-                          key={w.id}
-                          className={`text-center font-mono text-sm font-medium ${
-                            stock === 0
-                              ? "text-stock-zero"
-                              : stock <= 5
-                              ? "text-stock-transfer"
-                              : "text-stock-in"
-                          }`}
-                        >
-                          {stock}
-                        </TableCell>
-                      );
-                    })}
-                    <TableCell
-                      className={`text-center font-mono text-sm font-bold ${
-                        total === 0 ? "text-stock-zero" : "text-foreground"
-                      }`}
-                    >
-                      {total}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">
+                    Description
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">
+                    Category
+                  </TableHead>
+                  {warehouses?.map((w) => (
+                    <TableHead key={w.id} className="text-[11px] uppercase tracking-[0.18em] text-center">
+                      {w.warehouse_name?.toUpperCase()}
+                    </TableHead>
+                  ))}
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em] text-center">
+                    Total
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from(productMap.entries()).map(([productId, levels]) => {
+                  const first = levels![0];
+                  const total = levels!.reduce((sum, l) => sum + (l.current_stock as number), 0);
+                  return (
+                    <TableRow key={productId} className="border-border/60 hover:bg-muted/40">
+                      <TableCell className="font-mono text-sm font-medium">
+                        {first.item_code}
+                      </TableCell>
+                      <TableCell className="text-sm">{first.item_description}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {first.category || "—"}
+                      </TableCell>
+                      {warehouses?.map((w) => {
+                        const level = levels!.find(
+                          (l) => l.warehouse_id === w.id
+                        );
+                        const stock = (level?.current_stock as number) ?? 0;
+                        return (
+                          <TableCell
+                            key={w.id}
+                            className={`text-center font-mono text-sm font-medium ${
+                              stock === 0
+                                ? "text-stock-zero"
+                                : stock <= 5
+                                ? "text-stock-transfer"
+                                : "text-stock-in"
+                            }`}
+                          >
+                            {stock}
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell
+                        className={`text-center font-mono text-sm font-semibold ${
+                          total === 0 ? "text-stock-zero" : "text-foreground"
+                        }`}
+                      >
+                        {total}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
     </div>

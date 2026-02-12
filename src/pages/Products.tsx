@@ -34,26 +34,54 @@ export default function Products() {
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-        // Check for merged cells
-        if (sheet["!merges"] && sheet["!merges"].length > 0) {
-          setErrors(["Merged cells detected in the Excel file. Please unmerge all cells and try again."]);
-          setPreview(null);
-          return;
-        }
-
         const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
 
         const parseErrors: string[] = [];
         const seenCodes = new Set<string>();
         const existingCodes = new Set(products?.map((p) => p.item_code) ?? []);
         const rows: ParsedRow[] = [];
+        let lastCategory: string | null = null;
+
+        // Try to detect the actual header names in a flexible way
+        const sampleRow = json[0] ?? {};
+        const headers = Object.keys(sampleRow);
+        const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const findHeader = (candidates: string[]): string | undefined =>
+          headers.find((header) =>
+            candidates.some((candidate) => normalize(header) === normalize(candidate))
+          );
+
+        const categoryKey = findHeader(["Category"]);
+        const codeKey = findHeader(["Item Code", "Code", "ItemCode", "SKU"]);
+        const descriptionKey = findHeader(["Item Description", "Description", "ItemDescription"]);
+
+        if (!codeKey) {
+          setErrors([
+            "Could not find an Item Code column. Make sure the first row has a header like 'Item Code'.",
+          ]);
+          setPreview(null);
+          return;
+        }
 
         json.forEach((row, idx) => {
-          const rawCode = String(row["Item Code"] ?? row["item_code"] ?? "").trim();
-          if (!rawCode) return; // skip blank item codes
+          const rawCategory = categoryKey
+            ? String(row[categoryKey] ?? "").trim()
+            : "";
+          if (rawCategory) {
+            lastCategory = rawCategory;
+          }
 
-          const category = String(row["Category"] ?? row["category"] ?? "").trim() || null;
-          const description = String(row["Item Description"] ?? row["item_description"] ?? "").trim() || null;
+          const rawCode = String(row[codeKey] ?? "").trim();
+
+          // If there is no item code, treat this row as a section/category header and skip it
+          if (!rawCode) {
+            return;
+          }
+
+          const category = lastCategory;
+          const description = descriptionKey
+            ? String(row[descriptionKey] ?? "").trim() || null
+            : null;
 
           if (seenCodes.has(rawCode)) {
             parseErrors.push(`Row ${idx + 2}: Duplicate Item Code "${rawCode}" in file`);
@@ -97,9 +125,14 @@ export default function Products() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Products</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
+            Catalog
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
+        </div>
         <div className="flex items-center gap-3">
           <input
             ref={fileInputRef}
@@ -113,6 +146,7 @@ export default function Products() {
           />
           <Button
             variant="outline"
+            className="border-dashed border-2 border-border/70 bg-background/70 hover:bg-muted/60"
             onClick={() => fileInputRef.current?.click()}
           >
             <FileSpreadsheet className="h-4 w-4 mr-2" />
@@ -123,7 +157,7 @@ export default function Products() {
 
       {/* Upload preview */}
       {errors.length > 0 && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-md p-4 mb-4">
+        <div className="bg-destructive/5 border border-destructive/25 rounded-2xl p-4 mb-4">
           {errors.map((err, i) => (
             <div key={i} className="flex items-start gap-2 text-sm text-destructive">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -134,8 +168,8 @@ export default function Products() {
       )}
 
       {preview && (
-        <div className="bg-card border rounded-md mb-6">
-          <div className="p-4 border-b flex items-center justify-between">
+        <div className="bg-card/95 border border-border/70 rounded-2xl mb-6 shadow-sm">
+          <div className="px-5 py-4 border-b border-border/70 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Upload className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">
@@ -147,70 +181,93 @@ export default function Products() {
               {addProducts.isPending ? "Uploading..." : "Confirm Upload"}
             </Button>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs">CATEGORY</TableHead>
-                <TableHead className="font-mono text-xs">ITEM CODE</TableHead>
-                <TableHead className="text-xs">DESCRIPTION</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {preview.slice(0, 20).map((row, i) => (
-                <TableRow key={i}>
-                  <TableCell className="text-sm">{row.category || "—"}</TableCell>
-                  <TableCell className="font-mono text-sm font-medium">{row.item_code}</TableCell>
-                  <TableCell className="text-sm">{row.item_description || "—"}</TableCell>
-                </TableRow>
-              ))}
-              {preview.length > 20 && (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                    ...and {preview.length - 20} more
-                  </TableCell>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">
+                    Category
+                  </TableHead>
+                  <TableHead className="font-mono text-[11px] uppercase tracking-[0.18em]">
+                    Item Code
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">
+                    Description
+                  </TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {preview.slice(0, 20).map((row, i) => (
+                  <TableRow key={i} className="hover:bg-muted/40">
+                    <TableCell className="text-sm">{row.category || "—"}</TableCell>
+                    <TableCell className="font-mono text-sm font-medium">{row.item_code}</TableCell>
+                    <TableCell className="text-sm">{row.item_description || "—"}</TableCell>
+                  </TableRow>
+                ))}
+                {preview.length > 20 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                      ...and {preview.length - 20} more
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 
       {/* Products list */}
-      <div className="bg-card border rounded-md">
-        <div className="p-4 border-b">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            All Products ({products?.length ?? 0})
-          </h2>
+      <div className="bg-card/95 border border-border/70 rounded-2xl shadow-sm">
+        <div className="px-5 py-4 border-b border-border/70 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              All Products
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {products?.length ?? 0} records currently in your catalog.
+            </p>
+          </div>
         </div>
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading...</div>
+          <div className="p-8 text-center text-muted-foreground text-sm">Loading products…</div>
         ) : !products?.length ? (
-          <div className="p-8 text-center text-muted-foreground">
+          <div className="p-8 text-center text-muted-foreground text-sm">
             No products yet. Upload an Excel file to get started.
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="font-mono text-xs">ITEM CODE</TableHead>
-                <TableHead className="text-xs">DESCRIPTION</TableHead>
-                <TableHead className="text-xs">CATEGORY</TableHead>
-                <TableHead className="text-xs">CREATED</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-sm font-medium">{p.item_code}</TableCell>
-                  <TableCell className="text-sm">{p.item_description || "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{p.category || "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground font-mono">
-                    {new Date(p.created_at).toLocaleDateString()}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-mono text-[11px] uppercase tracking-[0.18em]">
+                    Item Code
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">
+                    Description
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">
+                    Category
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em]">
+                    Created
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {products.map((p) => (
+                  <TableRow key={p.id} className="hover:bg-muted/40">
+                    <TableCell className="font-mono text-sm font-medium">{p.item_code}</TableCell>
+                    <TableCell className="text-sm">{p.item_description || "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{p.category || "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground font-mono">
+                      {new Date(p.created_at).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
     </div>
