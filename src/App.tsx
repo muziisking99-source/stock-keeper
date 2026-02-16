@@ -6,8 +6,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
-import StockMovements from "@/pages/StockMovements";
 import CurrentStock from "@/pages/CurrentStock";
+import Receiving from "@/pages/Receiving";
+import Issuing from "@/pages/Issuing";
+import Transfer from "@/pages/Transfer";
 import MasterData from "@/pages/MasterData";
 import NotFound from "./pages/NotFound";
 
@@ -24,9 +26,11 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/current-stock" element={<CurrentStock />} />
-              <Route path="/movements" element={<StockMovements />} />
+              <Route path="/movements" element={<Navigate to="/movements/receiving" replace />} />
+              <Route path="/movements/receiving" element={<Receiving />} />
+              <Route path="/movements/issuing" element={<Issuing />} />
+              <Route path="/movements/transfer" element={<Transfer />} />
               <Route path="/master-data" element={<MasterData />} />
-              {/* Backwards compatibility: old /products URL now points to Master Data */}
               <Route path="/products" element={<Navigate to="/master-data" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -1,15 +1,61 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, ArrowLeftRight, BarChart3 } from "lucide-react";
+import {
+  LayoutDashboard,
+  Package,
+  ArrowLeftRight,
+  BarChart3,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ChevronDown,
+} from "lucide-react";
+import { useState } from "react";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/current-stock", label: "Current Stock", icon: BarChart3 },
-  { to: "/movements", label: "Stock Movements", icon: ArrowLeftRight },
+];
+
+const movementSubItems = [
+  { to: "/movements/receiving", label: "Receiving", icon: ArrowDownToLine },
+  { to: "/movements/issuing", label: "Issuing", icon: ArrowUpFromLine },
+  { to: "/movements/transfer", label: "Transfer", icon: ArrowLeftRight },
+];
+
+const bottomItems = [
   { to: "/master-data", label: "Master Data", icon: Package },
 ];
 
+function NavItem({ to, label, icon: Icon, isActive, indent }: { to: string; label: string; icon: any; isActive: boolean; indent?: boolean }) {
+  return (
+    <Link
+      to={to}
+      className={`group relative flex items-center gap-3 ${indent ? "pl-6" : ""} px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+        isActive
+          ? "bg-sidebar-accent/25 text-sidebar-primary shadow-[0_0_0_1px_rgba(148,163,184,0.3)]"
+          : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/10"
+      }`}
+    >
+      <span
+        className={`absolute inset-y-1 left-1 w-[2px] rounded-full bg-sidebar-primary/90 transition-opacity ${
+          isActive ? "opacity-100" : "opacity-0 group-hover:opacity-60"
+        }`}
+      />
+      <div
+        className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sidebar-border/70 bg-sidebar-accent/10 text-xs transition-colors ${
+          isActive ? "bg-sidebar-primary text-sidebar-primary-foreground" : ""
+        }`}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <span>{label}</span>
+    </Link>
+  );
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const isMovementRoute = location.pathname.startsWith("/movements");
+  const [movementsOpen, setMovementsOpen] = useState(isMovementRoute);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),radial-gradient(circle_at_bottom,_rgba(129,140,248,0.16),_transparent_55%)] bg-background/95 text-foreground">
@@ -38,34 +84,45 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <nav className="flex-1 p-3 space-y-1">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.to;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                    isActive
-                      ? "bg-sidebar-accent/25 text-sidebar-primary shadow-[0_0_0_1px_rgba(148,163,184,0.3)]"
-                      : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/10"
-                  }`}
-                >
-                  <span
-                    className={`absolute inset-y-1 left-1 w-[2px] rounded-full bg-sidebar-primary/90 transition-opacity ${
-                      isActive ? "opacity-100" : "opacity-0 group-hover:opacity-60"
-                    }`}
-                  />
-                  <div
-                    className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sidebar-border/70 bg-sidebar-accent/10 text-xs transition-colors ${
-                      isActive ? "bg-sidebar-primary text-sidebar-primary-foreground" : ""
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4" />
-                  </div>
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+            {navItems.map((item) => (
+              <NavItem key={item.to} {...item} isActive={location.pathname === item.to} />
+            ))}
+
+            {/* Stock Movements parent */}
+            <button
+              onClick={() => setMovementsOpen(!movementsOpen)}
+              className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 w-full text-left ${
+                isMovementRoute
+                  ? "text-sidebar-primary"
+                  : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/10"
+              }`}
+            >
+              <div
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sidebar-border/70 bg-sidebar-accent/10 text-xs transition-colors ${
+                  isMovementRoute ? "bg-sidebar-primary text-sidebar-primary-foreground" : ""
+                }`}
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+              </div>
+              <span className="flex-1">Stock Movements</span>
+              <ChevronDown
+                className={`h-4 w-4 text-sidebar-foreground/50 transition-transform ${
+                  movementsOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {movementsOpen && (
+              <div className="space-y-0.5 ml-2">
+                {movementSubItems.map((item) => (
+                  <NavItem key={item.to} {...item} isActive={location.pathname === item.to} indent />
+                ))}
+              </div>
+            )}
+
+            {bottomItems.map((item) => (
+              <NavItem key={item.to} {...item} isActive={location.pathname === item.to} />
+            ))}
           </nav>
           <div className="border-t border-sidebar-border/60 px-4 py-3 text-[11px] text-sidebar-foreground/60 font-mono">
             <div className="flex items-center justify-between gap-2">
