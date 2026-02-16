@@ -35,7 +35,8 @@ export function useStockLevels() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stock_levels")
-        .select("*");
+        .select("*")
+        .gt("current_stock", 0);
       if (error) throw error;
       return data;
     },
