@@ -4,16 +4,55 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { useAuth } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import CurrentStock from "@/pages/CurrentStock";
 import Receiving from "@/pages/Receiving";
 import Issuing from "@/pages/Issuing";
 import Transfer from "@/pages/Transfer";
-import MasterData from "@/pages/MasterData";
+import Products from "@/pages/Products";
+import Warehouses from "@/pages/Warehouses";
+import Login from "@/pages/Login";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground text-sm font-mono">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground text-sm font-mono">Loading...</p>
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -22,19 +61,31 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppLayout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/current-stock" element={<CurrentStock />} />
-              <Route path="/movements" element={<Navigate to="/movements/receiving" replace />} />
-              <Route path="/movements/receiving" element={<Receiving />} />
-              <Route path="/movements/issuing" element={<Issuing />} />
-              <Route path="/movements/transfer" element={<Transfer />} />
-              <Route path="/master-data" element={<MasterData />} />
-              <Route path="/products" element={<Navigate to="/master-data" replace />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AppLayout>
+          <Routes>
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/current-stock" element={<CurrentStock />} />
+                      <Route path="/movements" element={<Navigate to="/movements/receiving" replace />} />
+                      <Route path="/movements/receiving" element={<Receiving />} />
+                      <Route path="/movements/issuing" element={<Issuing />} />
+                      <Route path="/movements/transfer" element={<Transfer />} />
+                      <Route path="/master-data" element={<Navigate to="/master-data/products" replace />} />
+                      <Route path="/master-data/products" element={<Products />} />
+                      <Route path="/master-data/warehouses" element={<Warehouses />} />
+                      <Route path="/products" element={<Navigate to="/master-data/products" replace />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
