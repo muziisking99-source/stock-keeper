@@ -35,7 +35,7 @@ export default function Login() {
           <div className="text-center mb-6">
             <h1 className="text-xl font-semibold tracking-tight text-foreground">StockTracker</h1>
             <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-[0.18em]">
-              {isSignUp ? "Create Account" : "Sign In"}
+              Sign In
             </p>
           </div>
 
