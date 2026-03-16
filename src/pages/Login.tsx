@@ -17,23 +17,10 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { display_name: displayName || email },
-          },
-        });
-        if (error) throw error;
-        toast.success("Account created! You're now logged in.");
-        navigate("/");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success("Welcome back!");
-        navigate("/");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success("Welcome back!");
+      navigate("/");
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
     } finally {
