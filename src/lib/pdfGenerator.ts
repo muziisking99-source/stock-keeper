@@ -1,92 +1,163 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export function generateMovementReceipt(movement: any, title: string) {
-  const doc = new jsPDF();
+// Color themes per movement type
+const themes = {
+  receiving: {
+    primary: [16, 124, 65] as [number, number, number],      // Green
+    secondary: [220, 252, 231] as [number, number, number],
+    accent: [34, 197, 94] as [number, number, number],
+    label: "GOODS RECEIVED NOTE",
+    reportLabel: "RECEIVING REPORT",
+    stripe: [240, 253, 244] as [number, number, number],
+  },
+  issuing: {
+    primary: [153, 27, 27] as [number, number, number],      // Red
+    secondary: [254, 226, 226] as [number, number, number],
+    accent: [239, 68, 68] as [number, number, number],
+    label: "GOODS ISSUE SLIP",
+    reportLabel: "ISSUING REPORT",
+    stripe: [254, 242, 242] as [number, number, number],
+  },
+  transfer: {
+    primary: [30, 64, 175] as [number, number, number],      // Blue
+    secondary: [219, 234, 254] as [number, number, number],
+    accent: [59, 130, 246] as [number, number, number],
+    label: "STOCK TRANSFER NOTE",
+    reportLabel: "TRANSFER REPORT",
+    stripe: [239, 246, 255] as [number, number, number],
+  },
+};
+
+type ThemeKey = keyof typeof themes;
+
+function getTheme(title: string): (typeof themes)[ThemeKey] {
+  if (title.toLowerCase().includes("receiv")) return themes.receiving;
+  if (title.toLowerCase().includes("issue") || title.toLowerCase().includes("issuing")) return themes.issuing;
+  return themes.transfer;
+}
+
+function drawHeader(doc: jsPDF, theme: (typeof themes)[ThemeKey]) {
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Header
-  doc.setFontSize(18);
+  // Colored banner
+  doc.setFillColor(...theme.primary);
+  doc.rect(0, 0, pageWidth, 38, "F");
+
+  // Accent bar
+  doc.setFillColor(...theme.accent);
+  doc.rect(0, 38, pageWidth, 3, "F");
+
+  // Company name
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("StockTracker", 14, 20);
+  doc.text("StockTracker", 16, 18);
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100);
-  doc.text(title.toUpperCase(), 14, 28);
-
-  // Line
-  doc.setDrawColor(200);
-  doc.line(14, 32, pageWidth - 14, 32);
-
-  // Details
-  doc.setTextColor(0);
+  // Document type
   doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(255, 255, 255);
+  doc.text(theme.label, 16, 30);
 
-  const details = [
-    ["Document:", title],
-    ["Date:", new Date(movement.movement_date).toLocaleDateString()],
-    ["Item Code:", movement.products?.item_code || "N/A"],
-    ["Description:", movement.products?.item_description || "N/A"],
-    ["Warehouse:", movement.warehouses?.warehouse_name || "N/A"],
-    ["Movement Type:", movement.movement_type],
-    ["Quantity:", String(movement.quantity)],
-    ["Reference:", movement.reference_note || "—"],
-    ["Record ID:", movement.id],
-  ];
+  // Date on right
+  doc.setFontSize(9);
+  doc.text(new Date().toLocaleDateString(), pageWidth - 16, 30, { align: "right" });
+}
 
-  let y = 40;
-  details.forEach(([label, value]) => {
-    doc.setFont("helvetica", "bold");
-    doc.text(label, 14, y);
-    doc.setFont("helvetica", "normal");
-    doc.text(value, 60, y);
-    y += 7;
-  });
-
-  // Footer
-  y += 10;
-  doc.setDrawColor(200);
-  doc.line(14, y, pageWidth - 14, y);
-  y += 8;
-  doc.setFontSize(8);
-  doc.setTextColor(130);
-  doc.text(`Generated on ${new Date().toLocaleString()}`, 14, y);
-  doc.text("StockTracker Inventory System", pageWidth - 14, y, { align: "right" });
+function drawFooter(doc: jsPDF, theme: (typeof themes)[ThemeKey]) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const y = pageHeight - 30;
 
   // Signature lines
-  y += 20;
-  doc.setDrawColor(180);
-  doc.line(14, y, 80, y);
-  doc.line(pageWidth - 80, y, pageWidth - 14, y);
-  y += 5;
+  doc.setDrawColor(...theme.accent);
+  doc.setLineWidth(0.5);
+  doc.line(16, y, 85, y);
+  doc.line(pageWidth - 85, y, pageWidth - 16, y);
+
+  doc.setFontSize(8);
+  doc.setTextColor(...theme.primary);
+  doc.setFont("helvetica", "bold");
+  doc.text("Prepared By", 16, y + 5);
+  doc.text("Received By", pageWidth - 85, y + 5);
+
+  // Bottom bar
+  doc.setFillColor(...theme.primary);
+  doc.rect(0, pageHeight - 14, pageWidth, 14, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 16, pageHeight - 5);
+  doc.text("StockTracker Inventory System", pageWidth - 16, pageHeight - 5, { align: "right" });
+}
+
+export function generateMovementReceipt(movement: any, title: string) {
+  const doc = new jsPDF();
+  const theme = getTheme(title);
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  drawHeader(doc, theme);
+
+  // Document number box
+  const boxY = 50;
+  doc.setFillColor(...theme.secondary);
+  doc.roundedRect(16, boxY, pageWidth - 32, 22, 3, 3, "F");
   doc.setFontSize(9);
-  doc.setTextColor(100);
-  doc.text("Prepared By", 14, y);
-  doc.text("Received By", pageWidth - 80, y);
+  doc.setTextColor(...theme.primary);
+  doc.setFont("helvetica", "bold");
+  doc.text("DOCUMENT ID", 24, boxY + 9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(8);
+  doc.text(movement.id, 24, boxY + 16);
+
+  // Details table
+  const details = [
+    ["Date", new Date(movement.movement_date).toLocaleDateString()],
+    ["Item Code", movement.products?.item_code || "N/A"],
+    ["Description", movement.products?.item_description || "N/A"],
+    ["Warehouse", movement.warehouses?.warehouse_name || "N/A"],
+    ["Movement Type", movement.movement_type],
+    ["Quantity", String(movement.quantity)],
+    ["Reference", movement.reference_note || "—"],
+  ];
+
+  autoTable(doc, {
+    startY: boxY + 30,
+    body: details,
+    theme: "plain",
+    styles: { fontSize: 10, cellPadding: { top: 5, bottom: 5, left: 12, right: 12 } },
+    columnStyles: {
+      0: { fontStyle: "bold", textColor: theme.primary, cellWidth: 45 },
+      1: { textColor: [40, 40, 40] },
+    },
+    alternateRowStyles: { fillColor: theme.stripe },
+    margin: { left: 16, right: 16 },
+  });
+
+  drawFooter(doc, theme);
 
   doc.save(`${title.replace(/\s+/g, "_")}_${movement.products?.item_code || "item"}_${new Date(movement.movement_date).toISOString().split("T")[0]}.pdf`);
 }
 
 export function generateMovementReport(movements: any[], title: string) {
   const doc = new jsPDF();
+  const theme = getTheme(title);
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Header
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text("StockTracker", 14, 20);
+  drawHeader(doc, theme);
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100);
-  doc.text(title.toUpperCase(), 14, 28);
-
+  // Summary box
+  const boxY = 50;
+  const totalQty = movements.reduce((sum, m) => sum + m.quantity, 0);
+  doc.setFillColor(...theme.secondary);
+  doc.roundedRect(16, boxY, pageWidth - 32, 18, 3, 3, "F");
   doc.setFontSize(9);
-  doc.text(`Generated: ${new Date().toLocaleString()}  |  Records: ${movements.length}`, 14, 35);
-
-  doc.setDrawColor(200);
-  doc.line(14, 38, pageWidth - 14, 38);
+  doc.setTextColor(...theme.primary);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${theme.reportLabel}`, 24, boxY + 8);
+  doc.text(`Total Records: ${movements.length}    |    Total Quantity: ${totalQty}`, 24, boxY + 14);
 
   // Table
   const tableData = movements.map((m) => [
@@ -100,32 +171,33 @@ export function generateMovementReport(movements: any[], title: string) {
   ]);
 
   autoTable(doc, {
-    startY: 42,
+    startY: boxY + 26,
     head: [["Date", "Type", "Item Code", "Description", "Warehouse", "Qty", "Note"]],
     body: tableData,
-    styles: { fontSize: 8, cellPadding: 2 },
-    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [245, 247, 250] },
+    styles: { fontSize: 8, cellPadding: 3 },
+    headStyles: {
+      fillColor: theme.primary,
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 8,
+    },
+    alternateRowStyles: { fillColor: theme.stripe },
     columnStyles: {
       0: { cellWidth: 22 },
       1: { cellWidth: 22 },
       5: { halign: "right", cellWidth: 15 },
     },
+    margin: { left: 16, right: 16 },
   });
 
-  // Summary
-  const totalQty = movements.reduce((sum, m) => sum + m.quantity, 0);
-  const finalY = (doc as any).lastAutoTable?.finalY || 100;
-  doc.setFontSize(10);
-  doc.setTextColor(0);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Total Quantity: ${totalQty}`, 14, finalY + 10);
-
-  // Footer
-  doc.setFontSize(8);
-  doc.setTextColor(130);
-  doc.setFont("helvetica", "normal");
-  doc.text("StockTracker Inventory System", pageWidth - 14, finalY + 10, { align: "right" });
+  // Footer bar
+  const pageHeight = doc.internal.pageSize.getHeight();
+  doc.setFillColor(...theme.primary);
+  doc.rect(0, pageHeight - 14, pageWidth, 14, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(7);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 16, pageHeight - 5);
+  doc.text("StockTracker Inventory System", pageWidth - 16, pageHeight - 5, { align: "right" });
 
   doc.save(`${title.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`);
 }

@@ -8,10 +8,8 @@ import { toast } from "sonner";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,23 +17,10 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { display_name: displayName || email },
-          },
-        });
-        if (error) throw error;
-        toast.success("Account created! You're now logged in.");
-        navigate("/");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success("Welcome back!");
-        navigate("/");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success("Welcome back!");
+      navigate("/");
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
     } finally {
@@ -50,22 +35,11 @@ export default function Login() {
           <div className="text-center mb-6">
             <h1 className="text-xl font-semibold tracking-tight text-foreground">StockTracker</h1>
             <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-[0.18em]">
-              {isSignUp ? "Create Account" : "Sign In"}
+              Sign In
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <div>
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input
-                  id="displayName"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Your name"
-                />
-              </div>
-            )}
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -90,19 +64,9 @@ export default function Login() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
+              {loading ? "Please wait..." : "Sign In"}
             </Button>
           </form>
-
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-            </button>
-          </div>
         </div>
       </div>
     </div>
