@@ -1,9 +1,7 @@
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Plus, Trash2, Package } from "lucide-react";
+import { Plus, Trash2, Package, Search, Check } from "lucide-react";
 
 export interface LineItem {
   id: string;
@@ -28,6 +26,68 @@ interface Props {
   onAdd: () => void;
   getStock?: (productId: string) => number | null;
   accentClass?: string;
+}
+
+function ProductSearch({ products, value, onChange, accentClass }: {
+  products: Product[] | undefined;
+  value: string;
+  onChange: (id: string) => void;
+  accentClass: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selected = products?.find((p) => p.id === value);
+
+  const filtered = products?.filter((p) => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return p.item_code.toLowerCase().includes(q) || (p.item_description?.toLowerCase().includes(q) ?? false);
+  }) ?? [];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative flex-1">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          value={open ? query : (selected ? `${selected.item_code} — ${selected.item_description || "N/A"}` : "")}
+          placeholder="Search products…"
+          className="h-9 text-xs bg-background pl-8 pr-3"
+          onFocus={() => { setOpen(true); setQuery(""); }}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        />
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-4 text-xs text-muted-foreground text-center">No products found</div>
+          ) : (
+            filtered.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors flex items-center gap-2 ${p.id === value ? 'bg-muted/40' : ''}`}
+                onClick={() => { onChange(p.id); setOpen(false); setQuery(""); }}
+              >
+                {p.id === value && <Check className={`h-3 w-3 shrink-0 ${accentClass}`} />}
+                <span className="font-mono font-medium">{p.item_code}</span>
+                <span className="text-muted-foreground truncate">— {p.item_description || "N/A"}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function MovementLineItems({ lines, products, onUpdate, onRemove, onAdd, getStock, accentClass = "text-primary" }: Props) {
@@ -63,21 +123,12 @@ export default function MovementLineItems({ lines, products, onUpdate, onRemove,
                 )}
               </div>
               <div className="flex gap-2 items-start">
-                <div className="flex-1">
-                  <Select value={line.productId} onValueChange={(v) => onUpdate(line.id, "productId", v)}>
-                    <SelectTrigger className="h-9 text-xs bg-background">
-                      <SelectValue placeholder="Select product…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products?.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          <span className="font-mono font-medium">{p.item_code}</span>
-                          <span className="text-muted-foreground ml-1.5">— {p.item_description || "N/A"}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <ProductSearch
+                  products={products}
+                  value={line.productId}
+                  onChange={(v) => onUpdate(line.id, "productId", v)}
+                  accentClass={accentClass}
+                />
                 <Input
                   type="number" min="1" value={line.quantity}
                   onChange={(e) => onUpdate(line.id, "quantity", e.target.value)}
