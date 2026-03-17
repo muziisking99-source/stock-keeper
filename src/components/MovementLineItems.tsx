@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Package, Search, Check } from "lucide-react";
@@ -37,6 +38,8 @@ function ProductSearch({ products, value, onChange, accentClass }: {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const selected = products?.find((p) => p.id === value);
 
@@ -46,28 +49,48 @@ function ProductSearch({ products, value, onChange, accentClass }: {
     return p.item_code.toLowerCase().includes(q) || (p.item_description?.toLowerCase().includes(q) ?? false);
   }) ?? [];
 
+  const updatePos = useCallback(() => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    }
+  }, []);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      const dropdown = document.getElementById("product-search-dropdown");
+      if (ref.current && !ref.current.contains(target) && (!dropdown || !dropdown.contains(target))) {
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (open) updatePos();
+  }, [open, updatePos]);
 
   return (
     <div ref={ref} className="relative flex-1">
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
         <Input
+          ref={inputRef}
           value={open ? query : (selected ? `${selected.item_code} — ${selected.item_description || "N/A"}` : "")}
           placeholder="Search products…"
           className="h-9 text-xs bg-background pl-8 pr-3"
-          onFocus={() => { setOpen(true); setQuery(""); }}
+          onFocus={() => { setOpen(true); setQuery(""); updatePos(); }}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         />
       </div>
-      {open && (
-        <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+      {open && pos && createPortal(
+        <div
+          id="product-search-dropdown"
+          style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
+          className="bg-popover border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto"
+        >
           {filtered.length === 0 ? (
             <div className="px-3 py-4 text-xs text-muted-foreground text-center">No products found</div>
           ) : (
@@ -84,7 +107,8 @@ function ProductSearch({ products, value, onChange, accentClass }: {
               </button>
             ))
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
