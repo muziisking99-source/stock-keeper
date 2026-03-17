@@ -6,7 +6,6 @@ import {
   useStockMovements,
 } from "@/hooks/useStockData";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -18,18 +17,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowDownToLine, FileText, Plus, Trash2 } from "lucide-react";
+import { ArrowDownToLine, FileText, Warehouse } from "lucide-react";
 import { toast } from "sonner";
 import { generateMovementReceipt, generateMovementReport } from "@/lib/pdfGenerator";
-
-interface LineItem {
-  id: string;
-  productId: string;
-  quantity: string;
-}
-
-let lineIdCounter = 0;
-const newLine = (): LineItem => ({ id: String(++lineIdCounter), productId: "", quantity: "" });
+import MovementLineItems, { type LineItem, newLine } from "@/components/MovementLineItems";
 
 export default function Receiving() {
   const { data: products } = useProducts();
@@ -50,11 +41,9 @@ export default function Receiving() {
   const updateLine = (id: string, field: keyof LineItem, value: string) => {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
   };
-
   const removeLine = (id: string) => {
     setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.id !== id)));
   };
-
   const addLine = () => setLines((prev) => [...prev, newLine()]);
 
   const isValid = warehouseId && lines.every((l) => l.productId && l.quantity && parseInt(l.quantity) > 0);
@@ -82,7 +71,6 @@ export default function Receiving() {
   };
 
   const receiveMovements = movements?.filter((m) => m.movement_type === "IN") ?? [];
-
   const handleDownloadReceipt = (movement: any) => generateMovementReceipt(movement, "Goods Received Note");
   const handleDownloadReport = () => generateMovementReport(receiveMovements, "Receiving Report");
 
@@ -106,13 +94,30 @@ export default function Receiving() {
                 <ArrowDownToLine className="h-4 w-4 mr-2" /> Receive Stock
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Receive Stock</DialogTitle></DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div>
-                  <Label>Warehouse</Label>
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0">
+              {/* Colored header */}
+              <div className="bg-gradient-to-r from-stock-in/15 to-stock-in/5 border-b border-stock-in/20 px-6 py-5">
+                <DialogHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-stock-in/20 flex items-center justify-center">
+                      <ArrowDownToLine className="h-5 w-5 text-stock-in" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-lg">Receive Stock</DialogTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">Add incoming goods to a warehouse</p>
+                    </div>
+                  </div>
+                </DialogHeader>
+              </div>
+
+              <div className="space-y-5 px-6 py-5">
+                {/* Warehouse */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Warehouse className="h-3.5 w-3.5" /> Destination Warehouse
+                  </Label>
                   <Select value={warehouseId} onValueChange={setWarehouseId}>
-                    <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                    <SelectTrigger className="bg-background"><SelectValue placeholder="Select warehouse" /></SelectTrigger>
                     <SelectContent>
                       {warehouses?.map((w: any) => (
                         <SelectItem key={w.id} value={w.id}>{w.warehouse_name}</SelectItem>
@@ -121,50 +126,28 @@ export default function Receiving() {
                   </Select>
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium">Items</Label>
-                    <Button type="button" variant="ghost" size="sm" onClick={addLine} className="h-7 text-xs">
-                      <Plus className="h-3 w-3 mr-1" /> Add Item
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {lines.map((line, idx) => (
-                      <div key={line.id} className="flex gap-2 items-start">
-                        <div className="flex-1">
-                          <Select value={line.productId} onValueChange={(v) => updateLine(line.id, "productId", v)}>
-                            <SelectTrigger className="h-9 text-xs">
-                              <SelectValue placeholder={`Product ${idx + 1}`} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {products?.map((p) => (
-                                <SelectItem key={p.id} value={p.id}>
-                                  <span className="font-mono">{p.item_code}</span> — {p.item_description || "N/A"}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Input
-                          type="number" min="1" value={line.quantity}
-                          onChange={(e) => updateLine(line.id, "quantity", e.target.value)}
-                          placeholder="Qty" className="w-20 h-9 text-xs"
-                        />
-                        <Button type="button" variant="ghost" size="sm" onClick={() => removeLine(line.id)}
-                          disabled={lines.length <= 1} className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                {/* Line items */}
+                <MovementLineItems
+                  lines={lines}
+                  products={products as any}
+                  onUpdate={updateLine}
+                  onRemove={removeLine}
+                  onAdd={addLine}
+                  accentClass="text-stock-in"
+                />
+
+                {/* Note */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reference Note</Label>
+                  <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="PO number, supplier, reason…" rows={2} className="bg-background" />
                 </div>
 
-                <div>
-                  <Label>Reference Note (optional)</Label>
-                  <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="PO number, reason, etc." rows={2} />
-                </div>
-                <Button className="w-full" onClick={handleSubmit} disabled={!isValid || submitting}>
-                  {submitting ? "Processing..." : `Receive ${lines.length} Item(s)`}
+                {/* Submit */}
+                <Button
+                  className="w-full h-11 bg-stock-in hover:bg-stock-in/90 text-stock-in-foreground font-semibold"
+                  onClick={handleSubmit} disabled={!isValid || submitting}
+                >
+                  {submitting ? "Processing…" : `Receive ${lines.length} Item(s)`}
                 </Button>
               </div>
             </DialogContent>
