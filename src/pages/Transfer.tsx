@@ -7,7 +7,6 @@ import {
   useStockLevels,
 } from "@/hooks/useStockData";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -19,18 +18,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowLeftRight, FileText, Plus, Trash2 } from "lucide-react";
+import { ArrowLeftRight, FileText, Warehouse } from "lucide-react";
 import { toast } from "sonner";
 import { generateMovementReceipt, generateMovementReport } from "@/lib/pdfGenerator";
-
-interface LineItem {
-  id: string;
-  productId: string;
-  quantity: string;
-}
-
-let lineIdCounter = 0;
-const newLine = (): LineItem => ({ id: String(++lineIdCounter), productId: "", quantity: "" });
+import MovementLineItems, { type LineItem, newLine } from "@/components/MovementLineItems";
 
 export default function Transfer() {
   const { data: products } = useProducts();
@@ -53,11 +44,9 @@ export default function Transfer() {
   const updateLine = (id: string, field: keyof LineItem, value: string) => {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
   };
-
   const removeLine = (id: string) => {
     setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.id !== id)));
   };
-
   const addLine = () => setLines((prev) => [...prev, newLine()]);
 
   const getStock = (prodId: string, whId: string) => {
@@ -72,7 +61,6 @@ export default function Transfer() {
 
   const handleSubmit = async () => {
     if (!isValid) return;
-    // Validate stock for all lines
     for (const line of lines) {
       const stock = getStock(line.productId, fromWarehouseId);
       const qty = parseInt(line.quantity);
@@ -103,7 +91,6 @@ export default function Transfer() {
   };
 
   const transferMovements = movements?.filter((m) => m.movement_type === "TRANSFER_IN" || m.movement_type === "TRANSFER_OUT") ?? [];
-
   const handleDownloadReceipt = (movement: any) => generateMovementReceipt(movement, "Transfer Note");
   const handleDownloadReport = () => generateMovementReport(transferMovements, "Transfer Report");
 
@@ -127,14 +114,31 @@ export default function Transfer() {
                 <ArrowLeftRight className="h-4 w-4 mr-2" /> Transfer Stock
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Transfer Stock</DialogTitle></DialogHeader>
-              <div className="space-y-4 pt-2">
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0">
+              {/* Colored header */}
+              <div className="bg-gradient-to-r from-stock-transfer/15 to-stock-transfer/5 border-b border-stock-transfer/20 px-6 py-5">
+                <DialogHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-stock-transfer/20 flex items-center justify-center">
+                      <ArrowLeftRight className="h-5 w-5 text-stock-transfer" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-lg">Transfer Stock</DialogTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">Move goods between warehouses</p>
+                    </div>
+                  </div>
+                </DialogHeader>
+              </div>
+
+              <div className="space-y-5 px-6 py-5">
+                {/* Warehouses */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>From</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Warehouse className="h-3.5 w-3.5" /> From
+                    </Label>
                     <Select value={fromWarehouseId} onValueChange={setFromWarehouseId}>
-                      <SelectTrigger><SelectValue placeholder="Source" /></SelectTrigger>
+                      <SelectTrigger className="bg-background"><SelectValue placeholder="Source" /></SelectTrigger>
                       <SelectContent>
                         {warehouses?.map((w: any) => (
                           <SelectItem key={w.id} value={w.id}>{w.warehouse_name}</SelectItem>
@@ -142,10 +146,12 @@ export default function Transfer() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>To</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Warehouse className="h-3.5 w-3.5" /> To
+                    </Label>
                     <Select value={toWarehouseId} onValueChange={setToWarehouseId}>
-                      <SelectTrigger><SelectValue placeholder="Destination" /></SelectTrigger>
+                      <SelectTrigger className="bg-background"><SelectValue placeholder="Destination" /></SelectTrigger>
                       <SelectContent>
                         {destinationWarehouses.map((w: any) => (
                           <SelectItem key={w.id} value={w.id}>{w.warehouse_name}</SelectItem>
@@ -155,58 +161,29 @@ export default function Transfer() {
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium">Items</Label>
-                    <Button type="button" variant="ghost" size="sm" onClick={addLine} className="h-7 text-xs">
-                      <Plus className="h-3 w-3 mr-1" /> Add Item
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {lines.map((line, idx) => {
-                      const stock = fromWarehouseId && line.productId ? getStock(line.productId, fromWarehouseId) : null;
-                      return (
-                        <div key={line.id} className="space-y-1">
-                          <div className="flex gap-2 items-start">
-                            <div className="flex-1">
-                              <Select value={line.productId} onValueChange={(v) => updateLine(line.id, "productId", v)}>
-                                <SelectTrigger className="h-9 text-xs">
-                                  <SelectValue placeholder={`Product ${idx + 1}`} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {products?.map((p) => (
-                                    <SelectItem key={p.id} value={p.id}>
-                                      <span className="font-mono">{p.item_code}</span> — {p.item_description || "N/A"}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <Input
-                              type="number" min="1" value={line.quantity}
-                              onChange={(e) => updateLine(line.id, "quantity", e.target.value)}
-                              placeholder="Qty" className="w-20 h-9 text-xs"
-                            />
-                            <Button type="button" variant="ghost" size="sm" onClick={() => removeLine(line.id)}
-                              disabled={lines.length <= 1} className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                          {stock !== null && (
-                            <p className="text-[10px] text-muted-foreground font-mono pl-1">Available: {stock}</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                {/* Line items */}
+                <MovementLineItems
+                  lines={lines}
+                  products={products as any}
+                  onUpdate={updateLine}
+                  onRemove={removeLine}
+                  onAdd={addLine}
+                  accentClass="text-stock-transfer"
+                  getStock={fromWarehouseId ? (pid) => getStock(pid, fromWarehouseId) : undefined}
+                />
+
+                {/* Note */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reference Note</Label>
+                  <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Transfer reason, etc." rows={2} className="bg-background" />
                 </div>
 
-                <div>
-                  <Label>Reference Note (optional)</Label>
-                  <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Transfer reason, etc." rows={2} />
-                </div>
-                <Button className="w-full" onClick={handleSubmit} disabled={!isValid || submitting}>
-                  {submitting ? "Processing..." : `Transfer ${lines.length} Item(s)`}
+                {/* Submit */}
+                <Button
+                  className="w-full h-11 bg-stock-transfer hover:bg-stock-transfer/90 text-stock-transfer-foreground font-semibold"
+                  onClick={handleSubmit} disabled={!isValid || submitting}
+                >
+                  {submitting ? "Processing…" : `Transfer ${lines.length} Item(s)`}
                 </Button>
               </div>
             </DialogContent>
