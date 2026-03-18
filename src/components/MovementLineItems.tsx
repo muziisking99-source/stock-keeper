@@ -88,6 +88,7 @@ function ProductSearch({ products, value, onChange, accentClass }: {
       {open && pos && createPortal(
         <div
           id="product-search-dropdown"
+          onMouseDown={(e) => e.preventDefault()}
           style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
           className="bg-popover border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto"
         >
