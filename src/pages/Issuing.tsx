@@ -110,7 +110,15 @@ export default function Issuing() {
                 <ArrowUpFromLine className="h-4 w-4 mr-2" /> Issue Stock
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0">
+            <DialogContent
+              className="max-w-lg max-h-[85vh] overflow-y-auto p-0"
+              onInteractOutside={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest("#product-search-dropdown")) {
+                  e.preventDefault();
+                }
+              }}
+            >
               {/* Colored header */}
               <div className="bg-gradient-to-r from-stock-out/15 to-stock-out/5 border-b border-stock-out/20 px-6 py-5">
                 <DialogHeader>
