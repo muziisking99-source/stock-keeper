@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, forwardRef, type ForwardedRef } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,12 +29,27 @@ interface Props {
   accentClass?: string;
 }
 
-function ProductSearch({ products, value, onChange, accentClass }: {
+interface ProductSearchProps {
   products: Product[] | undefined;
   value: string;
   onChange: (id: string) => void;
   accentClass: string;
-}) {
+}
+
+const assignRef = <T,>(ref: ForwardedRef<T>, value: T) => {
+  if (typeof ref === "function") {
+    ref(value);
+    return;
+  }
+  if (ref) {
+    ref.current = value;
+  }
+};
+
+const ProductSearch = forwardRef<HTMLDivElement, ProductSearchProps>(function ProductSearch(
+  { products, value, onChange, accentClass },
+  forwardedRef,
+) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -90,7 +105,13 @@ function ProductSearch({ products, value, onChange, accentClass }: {
   };
 
   return (
-    <div ref={containerRef} className="relative flex-1">
+    <div
+      ref={(node) => {
+        containerRef.current = node;
+        assignRef(forwardedRef, node);
+      }}
+      className="relative flex-1"
+    >
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
         <input
@@ -98,12 +119,21 @@ function ProductSearch({ products, value, onChange, accentClass }: {
           value={open ? query : (selected ? `${selected.item_code} — ${selected.item_description || "N/A"}` : "")}
           placeholder="Search products…"
           className="flex h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          onFocus={() => { setOpen(true); setQuery(""); updatePos(); }}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => {
+            setOpen(true);
+            setQuery("");
+            updatePos();
+          }}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
         />
       </div>
       {open && pos && createPortal(
         <div
+          id="product-search-dropdown"
+          data-product-search-dropdown="true"
           ref={dropdownRef}
           style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
           className="bg-popover border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto"
@@ -116,7 +146,12 @@ function ProductSearch({ products, value, onChange, accentClass }: {
                 key={p.id}
                 type="button"
                 className={`w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors flex items-center gap-2 ${p.id === value ? "bg-muted/40" : ""}`}
-                onMouseDown={(e) => {
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSelect(p.id);
+                }}
+                onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   handleSelect(p.id);
@@ -129,11 +164,11 @@ function ProductSearch({ products, value, onChange, accentClass }: {
             ))
           )}
         </div>,
-        document.body
+        document.body,
       )}
     </div>
   );
-}
+});
 
 export default function MovementLineItems({ lines, products, onUpdate, onRemove, onAdd, getStock, accentClass = "text-primary" }: Props) {
   return (
@@ -163,7 +198,7 @@ export default function MovementLineItems({ lines, products, onUpdate, onRemove,
                 <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Item</span>
                 {stock !== null && (
                   <span className="ml-auto text-[10px] font-mono text-muted-foreground">
-                    Stock: <span className={`font-semibold ${stock === 0 ? 'text-destructive' : 'text-foreground'}`}>{stock}</span>
+                    Stock: <span className={`font-semibold ${stock === 0 ? "text-destructive" : "text-foreground"}`}>{stock}</span>
                   </span>
                 )}
               </div>
