@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect, useCallback, forwardRef, type ForwardedRef } from "react";
-import { createPortal } from "react-dom";
+import { useState, useRef, useEffect, forwardRef, type ForwardedRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Package, Search, Check } from "lucide-react";
@@ -54,8 +53,6 @@ const ProductSearch = forwardRef<HTMLDivElement, ProductSearchProps>(function Pr
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const selected = products?.find((p) => p.id === value);
 
@@ -65,38 +62,19 @@ const ProductSearch = forwardRef<HTMLDivElement, ProductSearchProps>(function Pr
     return p.item_code.toLowerCase().includes(q) || (p.item_description?.toLowerCase().includes(q) ?? false);
   }) ?? [];
 
-  const updatePos = useCallback(() => {
-    if (!inputRef.current) return;
-    const rect = inputRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-  }, []);
-
   useEffect(() => {
     if (!open) return;
 
-    const handlePointerDown = (e: PointerEvent) => {
+    const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (containerRef.current?.contains(target)) return;
       if (dropdownRef.current?.contains(target)) return;
       setOpen(false);
     };
 
-    const handleViewportChange = () => updatePos();
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
-    };
-  }, [open, updatePos]);
-
-  useEffect(() => {
-    if (open) updatePos();
-  }, [open, filtered.length, updatePos]);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   const handleSelect = (productId: string) => {
     onChange(productId);
@@ -115,14 +93,12 @@ const ProductSearch = forwardRef<HTMLDivElement, ProductSearchProps>(function Pr
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
         <input
-          ref={inputRef}
           value={open ? query : (selected ? `${selected.item_code} — ${selected.item_description || "N/A"}` : "")}
           placeholder="Search products…"
           className="flex h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           onFocus={() => {
             setOpen(true);
             setQuery("");
-            updatePos();
           }}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -130,13 +106,13 @@ const ProductSearch = forwardRef<HTMLDivElement, ProductSearchProps>(function Pr
           }}
         />
       </div>
-      {open && pos && createPortal(
+
+      {open && (
         <div
           id="product-search-dropdown"
           data-product-search-dropdown="true"
           ref={dropdownRef}
-          style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
-          className="bg-popover border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto"
+          className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 bg-popover border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto"
         >
           {filtered.length === 0 ? (
             <div className="px-3 py-4 text-xs text-muted-foreground text-center">No products found</div>
@@ -146,12 +122,7 @@ const ProductSearch = forwardRef<HTMLDivElement, ProductSearchProps>(function Pr
                 key={p.id}
                 type="button"
                 className={`w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors flex items-center gap-2 ${p.id === value ? "bg-muted/40" : ""}`}
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleSelect(p.id);
-                }}
-                onClick={(e) => {
+                onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   handleSelect(p.id);
@@ -163,8 +134,7 @@ const ProductSearch = forwardRef<HTMLDivElement, ProductSearchProps>(function Pr
               </button>
             ))
           )}
-        </div>,
-        document.body,
+        </div>
       )}
     </div>
   );
@@ -186,7 +156,7 @@ export default function MovementLineItems({ lines, products, onUpdate, onRemove,
         </Button>
       </div>
 
-      <div className="rounded-xl border border-border/70 bg-muted/30 divide-y divide-border/50 overflow-hidden">
+      <div className="rounded-xl border border-border/70 bg-muted/30 divide-y divide-border/50">
         {lines.map((line, idx) => {
           const stock = getStock ? getStock(line.productId) : null;
           return (
