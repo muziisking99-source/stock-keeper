@@ -37,7 +37,8 @@ function ProductSearch({ products, value, onChange, accentClass }: {
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -50,45 +51,60 @@ function ProductSearch({ products, value, onChange, accentClass }: {
   }) ?? [];
 
   const updatePos = useCallback(() => {
-    if (inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-    }
+    if (!inputRef.current) return;
+    const rect = inputRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
   }, []);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    if (!open) return;
+
+    const handlePointerDown = (e: PointerEvent) => {
       const target = e.target as Node;
-      const dropdown = document.getElementById("product-search-dropdown");
-      if (ref.current && !ref.current.contains(target) && (!dropdown || !dropdown.contains(target))) {
-        setOpen(false);
-      }
+      if (containerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+
+    const handleViewportChange = () => updatePos();
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [open, updatePos]);
 
   useEffect(() => {
     if (open) updatePos();
-  }, [open, updatePos]);
+  }, [open, filtered.length, updatePos]);
+
+  const handleSelect = (productId: string) => {
+    onChange(productId);
+    setOpen(false);
+    setQuery("");
+  };
 
   return (
-    <div ref={ref} className="relative flex-1">
+    <div ref={containerRef} className="relative flex-1">
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-        <Input
+        <input
           ref={inputRef}
           value={open ? query : (selected ? `${selected.item_code} — ${selected.item_description || "N/A"}` : "")}
           placeholder="Search products…"
-          className="h-9 text-xs bg-background pl-8 pr-3"
+          className="flex h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           onFocus={() => { setOpen(true); setQuery(""); updatePos(); }}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         />
       </div>
       {open && pos && createPortal(
         <div
-          id="product-search-dropdown"
-          onMouseDown={(e) => e.preventDefault()}
+          ref={dropdownRef}
           style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
           className="bg-popover border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto"
         >
@@ -99,8 +115,12 @@ function ProductSearch({ products, value, onChange, accentClass }: {
               <button
                 key={p.id}
                 type="button"
-                className={`w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors flex items-center gap-2 ${p.id === value ? 'bg-muted/40' : ''}`}
-                onClick={() => { onChange(p.id); setOpen(false); setQuery(""); }}
+                className={`w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors flex items-center gap-2 ${p.id === value ? "bg-muted/40" : ""}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSelect(p.id);
+                }}
               >
                 {p.id === value && <Check className={`h-3 w-3 shrink-0 ${accentClass}`} />}
                 <span className="font-mono font-medium">{p.item_code}</span>
