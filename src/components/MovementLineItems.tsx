@@ -121,16 +121,18 @@ const ProductSearch = forwardRef<HTMLDivElement, ProductSearchProps>(function Pr
               <button
                 key={p.id}
                 type="button"
-                className={`w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors flex items-center gap-2 ${p.id === value ? "bg-muted/40" : ""}`}
+                className={`w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors flex items-start gap-2 ${p.id === value ? "bg-muted/40" : ""}`}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   handleSelect(p.id);
                 }}
               >
-                {p.id === value && <Check className={`h-3 w-3 shrink-0 ${accentClass}`} />}
-                <span className="font-mono font-medium">{p.item_code}</span>
-                <span className="text-muted-foreground truncate">— {p.item_description || "N/A"}</span>
+                {p.id === value && <Check className={`h-3 w-3 shrink-0 mt-0.5 ${accentClass}`} />}
+                <div className="flex flex-col min-w-0">
+                  <span className="font-mono font-medium">{p.item_code}</span>
+                  <span className="text-muted-foreground text-[11px] whitespace-normal break-words">{p.item_description || "N/A"}</span>
+                </div>
               </button>
             ))
           )}
