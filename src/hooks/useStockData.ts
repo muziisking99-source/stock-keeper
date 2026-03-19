@@ -87,6 +87,7 @@ export function useAddStockMovement() {
       movement_type: string;
       quantity: number;
       reference_note?: string;
+      batch_id?: string;
     }) => {
       const { data, error } = await supabase
         .from("stock_movements")
