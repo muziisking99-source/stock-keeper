@@ -87,6 +87,7 @@ export function useAddStockMovement() {
       movement_type: string;
       quantity: number;
       reference_note?: string;
+      batch_id?: string;
     }) => {
       const { data, error } = await supabase
         .from("stock_movements")
@@ -112,6 +113,7 @@ export function useTransferStock() {
       to_warehouse_id: string;
       quantity: number;
       reference_note?: string;
+      batch_id?: string;
     }) => {
       // Insert TRANSFER_OUT from source
       const { error: outError } = await supabase
@@ -122,6 +124,7 @@ export function useTransferStock() {
           movement_type: "TRANSFER_OUT",
           quantity: transfer.quantity,
           reference_note: transfer.reference_note,
+          batch_id: transfer.batch_id,
         });
       if (outError) throw outError;
 
@@ -134,6 +137,7 @@ export function useTransferStock() {
           movement_type: "TRANSFER_IN",
           quantity: transfer.quantity,
           reference_note: transfer.reference_note,
+          batch_id: transfer.batch_id,
         });
       if (inError) throw inError;
     },

@@ -64,6 +64,7 @@ export type Database = {
       }
       stock_movements: {
         Row: {
+          batch_id: string | null
           created_at: string
           id: string
           movement_date: string
@@ -74,6 +75,7 @@ export type Database = {
           warehouse_id: string
         }
         Insert: {
+          batch_id?: string | null
           created_at?: string
           id?: string
           movement_date?: string
@@ -84,6 +86,7 @@ export type Database = {
           warehouse_id: string
         }
         Update: {
+          batch_id?: string | null
           created_at?: string
           id?: string
           movement_date?: string

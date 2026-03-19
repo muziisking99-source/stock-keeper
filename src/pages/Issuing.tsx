@@ -18,10 +18,11 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowUpFromLine, FileText, Warehouse } from "lucide-react";
+import { ArrowUpFromLine, FileText, Warehouse, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { generateMovementReceipt, generateMovementReport } from "@/lib/pdfGenerator";
 import MovementLineItems, { type LineItem, newLine } from "@/components/MovementLineItems";
+import { groupByBatch } from "@/lib/groupMovements";
 
 export default function Issuing() {
   const { data: products } = useProducts();
@@ -35,6 +36,7 @@ export default function Issuing() {
   const [note, setNote] = useState("");
   const [lines, setLines] = useState<LineItem[]>([newLine()]);
   const [submitting, setSubmitting] = useState(false);
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
 
   const resetForm = () => {
     setWarehouseId(""); setNote(""); setLines([newLine()]); setOpen(false);
@@ -68,6 +70,7 @@ export default function Issuing() {
     }
     setSubmitting(true);
     try {
+      const batchId = crypto.randomUUID();
       for (const line of lines) {
         await addMovement.mutateAsync({
           product_id: line.productId,
@@ -75,6 +78,7 @@ export default function Issuing() {
           movement_type: "OUT",
           quantity: parseInt(line.quantity),
           reference_note: note || undefined,
+          batch_id: batchId,
         });
       }
       toast.success(`${lines.length} item(s) issued successfully`);
@@ -87,8 +91,17 @@ export default function Issuing() {
   };
 
   const issueMovements = movements?.filter((m) => m.movement_type === "OUT") ?? [];
+  const grouped = groupByBatch(issueMovements);
   const handleDownloadReceipt = (movement: any) => generateMovementReceipt(movement, "Issue Slip");
   const handleDownloadReport = () => generateMovementReport(issueMovements, "Issuing Report");
+
+  const toggleBatch = (batchId: string) => {
+    setExpandedBatches((prev) => {
+      const next = new Set(prev);
+      next.has(batchId) ? next.delete(batchId) : next.add(batchId);
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -119,7 +132,6 @@ export default function Issuing() {
                 }
               }}
             >
-              {/* Colored header */}
               <div className="bg-gradient-to-r from-stock-out/15 to-stock-out/5 border-b border-stock-out/20 px-6 py-5">
                 <DialogHeader>
                   <div className="flex items-center gap-3">
@@ -135,7 +147,6 @@ export default function Issuing() {
               </div>
 
               <div className="space-y-5 px-6 py-5">
-                {/* Warehouse */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <Warehouse className="h-3.5 w-3.5" /> Source Warehouse
@@ -150,7 +161,6 @@ export default function Issuing() {
                   </Select>
                 </div>
 
-                {/* Line items */}
                 <MovementLineItems
                   lines={lines}
                   products={products as any}
@@ -161,13 +171,11 @@ export default function Issuing() {
                   getStock={warehouseId ? (pid) => getStock(pid, warehouseId) : undefined}
                 />
 
-                {/* Note */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reference Note</Label>
                   <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason, order ref, etc." rows={2} className="bg-background" />
                 </div>
 
-                {/* Submit */}
                 <Button
                   className="w-full h-11 bg-stock-out hover:bg-stock-out/90 text-stock-out-foreground font-semibold"
                   onClick={handleSubmit} disabled={!isValid || submitting}
@@ -186,36 +194,78 @@ export default function Issuing() {
         </div>
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground text-sm">Loading…</div>
-        ) : !issueMovements.length ? (
+        ) : !grouped.length ? (
           <div className="p-8 text-center text-muted-foreground text-sm">No issuing records yet.</div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8" />
                   <TableHead className="text-[11px] uppercase tracking-[0.18em]">Date</TableHead>
-                  <TableHead className="font-mono text-[11px] uppercase tracking-[0.18em]">Item Code</TableHead>
+                  <TableHead className="font-mono text-[11px] uppercase tracking-[0.18em]">Items</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-[0.18em]">Warehouse</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-[0.18em] text-right">Qty</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em] text-right">Total Qty</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-[0.18em]">Note</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {issueMovements.map((m) => (
-                  <TableRow key={m.id} className="hover:bg-muted/40">
-                    <TableCell className="text-sm font-mono text-muted-foreground">{new Date(m.movement_date).toLocaleDateString()}</TableCell>
-                    <TableCell className="font-mono text-sm font-medium">{(m.products as any)?.item_code}</TableCell>
-                    <TableCell className="text-sm">{(m.warehouses as any)?.warehouse_name}</TableCell>
-                    <TableCell className="text-sm font-mono text-right font-medium">{m.quantity}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-[220px] truncate">{m.reference_note || "—"}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleDownloadReceipt(m)}>
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {grouped.map((group) => {
+                  const isMulti = group.movements.length > 1;
+                  const isExpanded = expandedBatches.has(group.batchId);
+                  const totalQty = group.movements.reduce((s: number, m: any) => s + m.quantity, 0);
+                  const itemCodes = group.movements.map((m: any) => (m.products as any)?.item_code).join(", ");
+
+                  return (
+                    <>
+                      <TableRow
+                        key={group.batchId}
+                        className={`hover:bg-muted/40 ${isMulti ? "cursor-pointer" : ""}`}
+                        onClick={() => isMulti && toggleBatch(group.batchId)}
+                      >
+                        <TableCell className="w-8 px-2">
+                          {isMulti && (isExpanded
+                            ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                            : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm font-mono text-muted-foreground">{new Date(group.date).toLocaleDateString()}</TableCell>
+                        <TableCell className="font-mono text-sm font-medium">
+                          {isMulti ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="bg-stock-out/15 text-stock-out text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{group.movements.length}</span>
+                              <span className="text-muted-foreground text-xs truncate max-w-[180px]">{itemCodes}</span>
+                            </span>
+                          ) : itemCodes}
+                        </TableCell>
+                        <TableCell className="text-sm">{group.warehouse}</TableCell>
+                        <TableCell className="text-sm font-mono text-right font-medium">{totalQty}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[220px] truncate">{group.note || "—"}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDownloadReceipt(group.movements[0]); }}>
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      {isMulti && isExpanded && group.movements.map((m: any) => (
+                        <TableRow key={m.id} className="bg-muted/20 hover:bg-muted/30">
+                          <TableCell />
+                          <TableCell className="text-xs font-mono text-muted-foreground pl-6">{new Date(m.movement_date).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-mono text-xs">{(m.products as any)?.item_code}</TableCell>
+                          <TableCell className="text-xs">{(m.warehouses as any)?.warehouse_name}</TableCell>
+                          <TableCell className="text-xs font-mono text-right">{m.quantity}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{m.reference_note || "—"}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" onClick={() => handleDownloadReceipt(m)}>
+                              <FileText className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

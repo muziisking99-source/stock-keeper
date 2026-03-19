@@ -1,0 +1,1 @@
+ALTER TABLE public.stock_movements ADD COLUMN batch_id uuid DEFAULT NULL;
