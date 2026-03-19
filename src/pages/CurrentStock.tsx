@@ -9,9 +9,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
+import DeleteStockDialog from "@/components/DeleteStockDialog";
 
 type SortOption = "code-asc" | "code-desc" | "stock-high" | "stock-low" | "desc-asc";
+
+interface DeleteTarget {
+  product_id: string;
+  warehouse_id: string;
+  item_code: string;
+  item_description: string | null;
+  warehouse_name: string;
+  current_stock: number;
+}
 
 export default function CurrentStock() {
   const { data: stockLevels, isLoading: stockLoading } = useStockLevels();
@@ -22,6 +32,7 @@ export default function CurrentStock() {
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("code-asc");
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   // Derive unique categories from stock data
   const categories = useMemo(() => {
@@ -178,6 +189,7 @@ export default function CurrentStock() {
                       <th className="px-4 py-2 text-left text-[11px] uppercase tracking-[0.18em]">Description</th>
                       <th className="px-4 py-2 text-left text-[11px] uppercase tracking-[0.18em]">Category</th>
                       <th className="px-4 py-2 text-right text-[11px] uppercase tracking-[0.18em]">Stock</th>
+                      <th className="px-4 py-2 w-10"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -190,6 +202,25 @@ export default function CurrentStock() {
                           <td className="px-4 py-2 text-sm">{sl.item_description || "—"}</td>
                           <td className="px-4 py-2 text-sm text-muted-foreground">{sl.category || "—"}</td>
                           <td className={`px-4 py-2 text-sm font-mono text-right font-semibold ${colorClass}`}>{stock}</td>
+                          <td className="px-2 py-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={() =>
+                                setDeleteTarget({
+                                  product_id: sl.product_id,
+                                  warehouse_id: sl.warehouse_id,
+                                  item_code: sl.item_code,
+                                  item_description: sl.item_description,
+                                  warehouse_name: warehouse_name,
+                                  current_stock: stock,
+                                })
+                              }
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -200,6 +231,12 @@ export default function CurrentStock() {
           ))}
         </div>
       )}
+
+      <DeleteStockDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        item={deleteTarget}
+      />
     </div>
   );
 }
