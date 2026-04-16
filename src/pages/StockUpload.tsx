@@ -1,8 +1,8 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X, Download } from "lucide-react";
 import { useProducts, useWarehouses, useAddStockMovement } from "@/hooks/useStockData";
 import { toast } from "sonner";
 
@@ -120,16 +120,34 @@ export default function StockUpload() {
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  const downloadTemplate = useCallback(() => {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["Item Code", "Warehouse", "Quantity"],
+      ["ITEM-001", "Main Warehouse", 100],
+      ["ITEM-002", "Main Warehouse", 50],
+    ]);
+    ws["!cols"] = [{ wch: 20 }, { wch: 25 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Stock Upload");
+    XLSX.writeFile(wb, "stock_upload_template.xlsx");
+  }, []);
+
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">Import</p>
-        <h1 className="text-2xl font-semibold tracking-tight">Stock Upload</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Upload an Excel file with columns: <span className="font-mono text-xs">Item Code</span>,{" "}
-          <span className="font-mono text-xs">Warehouse</span>,{" "}
-          <span className="font-mono text-xs">Quantity</span>
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">Import</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Stock Upload</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Upload an Excel file with columns: <span className="font-mono text-xs">Item Code</span>,{" "}
+            <span className="font-mono text-xs">Warehouse</span>,{" "}
+            <span className="font-mono text-xs">Quantity</span>
+          </p>
+        </div>
+        <Button variant="outline" size="sm" className="gap-2" onClick={downloadTemplate}>
+          <Download className="h-4 w-4" />
+          Download Template
+        </Button>
       </div>
 
       {state === "idle" && (
