@@ -10,6 +10,7 @@ import {
   Warehouse,
   ShoppingCart,
   LogOut,
+  FileUp,
 } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +19,7 @@ import { toast } from "sonner";
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/current-stock", label: "Current Stock", icon: BarChart3 },
+  { to: "/stock-upload", label: "Stock Upload", icon: FileUp },
 ];
 
 const movementSubItems = [

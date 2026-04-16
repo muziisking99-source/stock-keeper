@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import CurrentStock from "@/pages/CurrentStock";
+import StockUpload from "@/pages/StockUpload";
 import Receiving from "@/pages/Receiving";
 import Issuing from "@/pages/Issuing";
 import Transfer from "@/pages/Transfer";
@@ -71,6 +72,7 @@ const App = () => (
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/current-stock" element={<CurrentStock />} />
+                      <Route path="/stock-upload" element={<StockUpload />} />
                       <Route path="/movements" element={<Navigate to="/movements/receiving" replace />} />
                       <Route path="/movements/receiving" element={<Receiving />} />
                       <Route path="/movements/issuing" element={<Issuing />} />
