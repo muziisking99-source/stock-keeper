@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   LogOut,
   FileUp,
+  ClipboardMinus,
 } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,7 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/current-stock", label: "Current Stock", icon: BarChart3 },
   { to: "/stock-upload", label: "Stock Upload", icon: FileUp },
+  { to: "/sales-clearance", label: "Sales Clearing", icon: ClipboardMinus },
 ];
 
 const movementSubItems = [
