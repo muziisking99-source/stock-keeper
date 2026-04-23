@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X, Download, PackagePlus } from "lucide-react";
-import { useProducts, useWarehouses, useAddStockMovement, useAddProducts } from "@/hooks/useStockData";
+import { useProducts, useWarehouses, useAddStockMovement, useAddProducts, useStockLevels } from "@/hooks/useStockData";
 import { toast } from "sonner";
 
 interface ParsedRow {
@@ -12,6 +12,7 @@ interface ParsedRow {
   item_code: string;
   warehouse_name: string;
   quantity: number;
+  current_stock: number;
   product_id?: string;
   warehouse_id?: string;
   error?: string;
@@ -22,6 +23,7 @@ type UploadState = "idle" | "parsed" | "uploading" | "done";
 export default function StockUpload() {
   const { data: products } = useProducts();
   const { data: warehouses } = useWarehouses();
+  const { data: stockLevels } = useStockLevels();
   const addMovement = useAddStockMovement();
   const addProducts = useAddProducts();
 
