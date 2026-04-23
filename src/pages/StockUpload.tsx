@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X, Download, PackagePlus } from "lucide-react";
-import { useProducts, useWarehouses, useAddStockMovement, useAddProducts } from "@/hooks/useStockData";
+import { useProducts, useWarehouses, useAddStockMovement, useAddProducts, useStockLevels } from "@/hooks/useStockData";
 import { toast } from "sonner";
 
 interface ParsedRow {
@@ -12,6 +12,7 @@ interface ParsedRow {
   item_code: string;
   warehouse_name: string;
   quantity: number;
+  current_stock: number;
   product_id?: string;
   warehouse_id?: string;
   error?: string;
@@ -22,6 +23,7 @@ type UploadState = "idle" | "parsed" | "uploading" | "done";
 export default function StockUpload() {
   const { data: products } = useProducts();
   const { data: warehouses } = useWarehouses();
+  const { data: stockLevels } = useStockLevels();
   const addMovement = useAddStockMovement();
   const addProducts = useAddProducts();
 
@@ -44,18 +46,36 @@ export default function StockUpload() {
     return m;
   }, [warehouses]);
 
+  const stockMap = useMemo(() => {
+    const m = new Map<string, number>();
+    stockLevels?.forEach((s: any) => {
+      m.set(`${s.product_id}_${s.warehouse_id}`, s.current_stock ?? 0);
+    });
+    return m;
+  }, [stockLevels]);
+
   const reValidate = useCallback((parsed: ParsedRow[]) => {
     return parsed.map((r) => {
-      const entry: ParsedRow = { rowNum: r.rowNum, item_code: r.item_code, warehouse_name: r.warehouse_name, quantity: r.quantity };
+      const entry: ParsedRow = {
+        rowNum: r.rowNum,
+        item_code: r.item_code,
+        warehouse_name: r.warehouse_name,
+        quantity: r.quantity,
+        current_stock: 0,
+      };
       const pid = productMap.get(r.item_code.toLowerCase());
       const wid = warehouseMap.get(r.warehouse_name.toLowerCase());
       if (!pid) entry.error = "Product not found";
       else if (!wid) entry.error = "Warehouse not found";
-      else if (!r.quantity || r.quantity <= 0) entry.error = "Invalid quantity";
-      else { entry.product_id = pid; entry.warehouse_id = wid; }
+      else if (r.quantity == null || isNaN(r.quantity) || r.quantity < 0) entry.error = "Invalid quantity";
+      else {
+        entry.product_id = pid;
+        entry.warehouse_id = wid;
+        entry.current_stock = stockMap.get(`${pid}_${wid}`) ?? 0;
+      }
       return entry;
     });
-  }, [productMap, warehouseMap]);
+  }, [productMap, warehouseMap, stockMap]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,14 +97,24 @@ export default function StockUpload() {
 
         if (!itemCode) return;
 
-        const entry: ParsedRow = { rowNum: idx + 2, item_code: itemCode, warehouse_name: whName, quantity: qty };
+        const entry: ParsedRow = {
+          rowNum: idx + 2,
+          item_code: itemCode,
+          warehouse_name: whName,
+          quantity: qty,
+          current_stock: 0,
+        };
         const pid = productMap.get(itemCode.toLowerCase());
         const wid = warehouseMap.get(whName.toLowerCase());
 
         if (!pid) entry.error = "Product not found";
         else if (!wid) entry.error = "Warehouse not found";
-        else if (!qty || qty <= 0) entry.error = "Invalid quantity";
-        else { entry.product_id = pid; entry.warehouse_id = wid; }
+        else if (isNaN(qty) || qty < 0) entry.error = "Invalid quantity";
+        else {
+          entry.product_id = pid;
+          entry.warehouse_id = wid;
+          entry.current_stock = stockMap.get(`${pid}_${wid}`) ?? 0;
+        }
 
         parsed.push(entry);
       });
@@ -147,24 +177,47 @@ export default function StockUpload() {
     let done = 0;
 
     for (const row of validRows) {
-      try {
-        await addMovement.mutateAsync({
-          product_id: row.product_id!,
-          warehouse_id: row.warehouse_id!,
-          movement_type: "IN",
-          quantity: row.quantity,
-          reference_note: `Stock upload from ${fileName}`,
-          batch_id: batchId,
-        });
-      } catch (err: any) {
-        toast.error(`Row ${row.rowNum}: ${err.message}`);
+      // 1. Clear out the existing stock first (if any) so the new value REPLACES it.
+      if (row.current_stock > 0) {
+        try {
+          await addMovement.mutateAsync({
+            product_id: row.product_id!,
+            warehouse_id: row.warehouse_id!,
+            movement_type: "OUT",
+            quantity: row.current_stock,
+            reference_note: `Stock upload reset from ${fileName} (cleared ${row.current_stock})`,
+            batch_id: batchId,
+          });
+        } catch (err: any) {
+          toast.error(`Row ${row.rowNum} reset: ${err.message}`);
+          done++;
+          setProgress(Math.round((done / validRows.length) * 100));
+          continue;
+        }
       }
+
+      // 2. Add the new uploaded quantity (skip if 0 — the row simply zeros stock).
+      if (row.quantity > 0) {
+        try {
+          await addMovement.mutateAsync({
+            product_id: row.product_id!,
+            warehouse_id: row.warehouse_id!,
+            movement_type: "IN",
+            quantity: row.quantity,
+            reference_note: `Stock upload from ${fileName} (set to ${row.quantity})`,
+            batch_id: batchId,
+          });
+        } catch (err: any) {
+          toast.error(`Row ${row.rowNum}: ${err.message}`);
+        }
+      }
+
       done++;
       setProgress(Math.round((done / validRows.length) * 100));
     }
 
     setState("done");
-    toast.success(`Uploaded ${done} stock entries`);
+    toast.success(`Replaced stock for ${done} item${done === 1 ? "" : "s"}`);
   };
 
   const reset = () => {
@@ -195,7 +248,8 @@ export default function StockUpload() {
           <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">Import</p>
           <h1 className="text-2xl font-semibold tracking-tight">Stock Upload</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Upload an Excel file with columns: <span className="font-mono text-xs">Item Code</span>,{" "}
+            Upload an Excel file to <span className="font-semibold text-foreground">replace</span> current stock with the values in the file. Columns:{" "}
+            <span className="font-mono text-xs">Item Code</span>,{" "}
             <span className="font-mono text-xs">Warehouse</span>,{" "}
             <span className="font-mono text-xs">Quantity</span>
           </p>
@@ -339,18 +393,25 @@ export default function StockUpload() {
                       <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider font-mono">Row</th>
                       <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider font-mono">Item Code</th>
                       <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider">Warehouse</th>
-                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">Qty</th>
+                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">Current</th>
+                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">→ New</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {validRows.slice(0, 50).map((r) => (
-                      <tr key={r.rowNum} className="border-b border-border/60 last:border-b-0">
-                        <td className="px-4 py-1.5 text-xs text-muted-foreground font-mono">{r.rowNum}</td>
-                        <td className="px-4 py-1.5 font-mono text-sm">{r.item_code}</td>
-                        <td className="px-4 py-1.5 text-sm">{r.warehouse_name}</td>
-                        <td className="px-4 py-1.5 text-sm font-mono text-right font-semibold">{r.quantity}</td>
-                      </tr>
-                    ))}
+                    {validRows.slice(0, 50).map((r) => {
+                      const changed = r.current_stock !== r.quantity;
+                      return (
+                        <tr key={r.rowNum} className="border-b border-border/60 last:border-b-0">
+                          <td className="px-4 py-1.5 text-xs text-muted-foreground font-mono">{r.rowNum}</td>
+                          <td className="px-4 py-1.5 font-mono text-sm">{r.item_code}</td>
+                          <td className="px-4 py-1.5 text-sm">{r.warehouse_name}</td>
+                          <td className="px-4 py-1.5 text-sm font-mono text-right text-muted-foreground">{r.current_stock}</td>
+                          <td className={`px-4 py-1.5 text-sm font-mono text-right font-semibold ${changed ? "text-stock-in" : ""}`}>
+                            {r.quantity}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -375,7 +436,7 @@ export default function StockUpload() {
             {state === "parsed" && validRows.length > 0 && (
               <Button onClick={handleUpload} className="gap-2">
                 <Upload className="h-4 w-4" />
-                Upload {validRows.length} entries
+                Replace stock for {validRows.length} item{validRows.length === 1 ? "" : "s"}
               </Button>
             )}
             {state === "done" && (
