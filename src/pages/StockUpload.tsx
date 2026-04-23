@@ -46,18 +46,36 @@ export default function StockUpload() {
     return m;
   }, [warehouses]);
 
+  const stockMap = useMemo(() => {
+    const m = new Map<string, number>();
+    stockLevels?.forEach((s: any) => {
+      m.set(`${s.product_id}_${s.warehouse_id}`, s.current_stock ?? 0);
+    });
+    return m;
+  }, [stockLevels]);
+
   const reValidate = useCallback((parsed: ParsedRow[]) => {
     return parsed.map((r) => {
-      const entry: ParsedRow = { rowNum: r.rowNum, item_code: r.item_code, warehouse_name: r.warehouse_name, quantity: r.quantity };
+      const entry: ParsedRow = {
+        rowNum: r.rowNum,
+        item_code: r.item_code,
+        warehouse_name: r.warehouse_name,
+        quantity: r.quantity,
+        current_stock: 0,
+      };
       const pid = productMap.get(r.item_code.toLowerCase());
       const wid = warehouseMap.get(r.warehouse_name.toLowerCase());
       if (!pid) entry.error = "Product not found";
       else if (!wid) entry.error = "Warehouse not found";
-      else if (!r.quantity || r.quantity <= 0) entry.error = "Invalid quantity";
-      else { entry.product_id = pid; entry.warehouse_id = wid; }
+      else if (r.quantity == null || isNaN(r.quantity) || r.quantity < 0) entry.error = "Invalid quantity";
+      else {
+        entry.product_id = pid;
+        entry.warehouse_id = wid;
+        entry.current_stock = stockMap.get(`${pid}_${wid}`) ?? 0;
+      }
       return entry;
     });
-  }, [productMap, warehouseMap]);
+  }, [productMap, warehouseMap, stockMap]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -79,14 +97,24 @@ export default function StockUpload() {
 
         if (!itemCode) return;
 
-        const entry: ParsedRow = { rowNum: idx + 2, item_code: itemCode, warehouse_name: whName, quantity: qty };
+        const entry: ParsedRow = {
+          rowNum: idx + 2,
+          item_code: itemCode,
+          warehouse_name: whName,
+          quantity: qty,
+          current_stock: 0,
+        };
         const pid = productMap.get(itemCode.toLowerCase());
         const wid = warehouseMap.get(whName.toLowerCase());
 
         if (!pid) entry.error = "Product not found";
         else if (!wid) entry.error = "Warehouse not found";
-        else if (!qty || qty <= 0) entry.error = "Invalid quantity";
-        else { entry.product_id = pid; entry.warehouse_id = wid; }
+        else if (isNaN(qty) || qty < 0) entry.error = "Invalid quantity";
+        else {
+          entry.product_id = pid;
+          entry.warehouse_id = wid;
+          entry.current_stock = stockMap.get(`${pid}_${wid}`) ?? 0;
+        }
 
         parsed.push(entry);
       });
