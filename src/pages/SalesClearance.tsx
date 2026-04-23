@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X, Download, ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X, Download, ArrowDown, ArrowUp, Minus, FileDown } from "lucide-react";
 import { useProducts, useWarehouses, useStockLevels, useAddStockMovement } from "@/hooks/useStockData";
 import { toast } from "sonner";
 
