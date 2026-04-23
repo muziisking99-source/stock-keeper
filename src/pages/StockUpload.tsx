@@ -177,24 +177,47 @@ export default function StockUpload() {
     let done = 0;
 
     for (const row of validRows) {
-      try {
-        await addMovement.mutateAsync({
-          product_id: row.product_id!,
-          warehouse_id: row.warehouse_id!,
-          movement_type: "IN",
-          quantity: row.quantity,
-          reference_note: `Stock upload from ${fileName}`,
-          batch_id: batchId,
-        });
-      } catch (err: any) {
-        toast.error(`Row ${row.rowNum}: ${err.message}`);
+      // 1. Clear out the existing stock first (if any) so the new value REPLACES it.
+      if (row.current_stock > 0) {
+        try {
+          await addMovement.mutateAsync({
+            product_id: row.product_id!,
+            warehouse_id: row.warehouse_id!,
+            movement_type: "OUT",
+            quantity: row.current_stock,
+            reference_note: `Stock upload reset from ${fileName} (cleared ${row.current_stock})`,
+            batch_id: batchId,
+          });
+        } catch (err: any) {
+          toast.error(`Row ${row.rowNum} reset: ${err.message}`);
+          done++;
+          setProgress(Math.round((done / validRows.length) * 100));
+          continue;
+        }
       }
+
+      // 2. Add the new uploaded quantity (skip if 0 — the row simply zeros stock).
+      if (row.quantity > 0) {
+        try {
+          await addMovement.mutateAsync({
+            product_id: row.product_id!,
+            warehouse_id: row.warehouse_id!,
+            movement_type: "IN",
+            quantity: row.quantity,
+            reference_note: `Stock upload from ${fileName} (set to ${row.quantity})`,
+            batch_id: batchId,
+          });
+        } catch (err: any) {
+          toast.error(`Row ${row.rowNum}: ${err.message}`);
+        }
+      }
+
       done++;
       setProgress(Math.round((done / validRows.length) * 100));
     }
 
     setState("done");
-    toast.success(`Uploaded ${done} stock entries`);
+    toast.success(`Replaced stock for ${done} item${done === 1 ? "" : "s"}`);
   };
 
   const reset = () => {
