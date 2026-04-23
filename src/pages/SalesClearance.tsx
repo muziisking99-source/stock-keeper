@@ -398,21 +398,33 @@ export default function SalesClearance() {
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             {state === "parsed" && changedRows.length > 0 && (
-              <Button onClick={handleUpload} className="gap-2">
-                <Upload className="h-4 w-4" />
-                Apply {changedRows.length} adjustment{changedRows.length !== 1 ? "s" : ""}
-                <span className="ml-1 text-xs opacity-80 font-mono">
-                  ({totals.inLines} in / {totals.outLines} out)
-                </span>
-              </Button>
+              <>
+                <Button onClick={handleUpload} className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Apply {changedRows.length} adjustment{changedRows.length !== 1 ? "s" : ""}
+                  <span className="ml-1 text-xs opacity-80 font-mono">
+                    ({totals.inLines} in / {totals.outLines} out)
+                  </span>
+                </Button>
+                <Button variant="outline" onClick={downloadReport} className="gap-2">
+                  <FileDown className="h-4 w-4" />
+                  Preview report
+                </Button>
+              </>
             )}
             {state === "parsed" && changedRows.length === 0 && validRows.length > 0 && (
               <p className="text-sm text-muted-foreground">All uploaded values already match current stock — nothing to apply.</p>
             )}
             {state === "done" && (
-              <Button onClick={reset} variant="outline">Upload another file</Button>
+              <>
+                <Button onClick={downloadReport} className="gap-2">
+                  <FileDown className="h-4 w-4" />
+                  Download IN/OUT report
+                </Button>
+                <Button onClick={reset} variant="outline">Upload another file</Button>
+              </>
             )}
           </div>
         </div>
