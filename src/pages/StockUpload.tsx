@@ -248,7 +248,8 @@ export default function StockUpload() {
           <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">Import</p>
           <h1 className="text-2xl font-semibold tracking-tight">Stock Upload</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Upload an Excel file with columns: <span className="font-mono text-xs">Item Code</span>,{" "}
+            Upload an Excel file to <span className="font-semibold text-foreground">replace</span> current stock with the values in the file. Columns:{" "}
+            <span className="font-mono text-xs">Item Code</span>,{" "}
             <span className="font-mono text-xs">Warehouse</span>,{" "}
             <span className="font-mono text-xs">Quantity</span>
           </p>
@@ -392,18 +393,25 @@ export default function StockUpload() {
                       <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider font-mono">Row</th>
                       <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider font-mono">Item Code</th>
                       <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider">Warehouse</th>
-                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">Qty</th>
+                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">Current</th>
+                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">→ New</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {validRows.slice(0, 50).map((r) => (
-                      <tr key={r.rowNum} className="border-b border-border/60 last:border-b-0">
-                        <td className="px-4 py-1.5 text-xs text-muted-foreground font-mono">{r.rowNum}</td>
-                        <td className="px-4 py-1.5 font-mono text-sm">{r.item_code}</td>
-                        <td className="px-4 py-1.5 text-sm">{r.warehouse_name}</td>
-                        <td className="px-4 py-1.5 text-sm font-mono text-right font-semibold">{r.quantity}</td>
-                      </tr>
-                    ))}
+                    {validRows.slice(0, 50).map((r) => {
+                      const changed = r.current_stock !== r.quantity;
+                      return (
+                        <tr key={r.rowNum} className="border-b border-border/60 last:border-b-0">
+                          <td className="px-4 py-1.5 text-xs text-muted-foreground font-mono">{r.rowNum}</td>
+                          <td className="px-4 py-1.5 font-mono text-sm">{r.item_code}</td>
+                          <td className="px-4 py-1.5 text-sm">{r.warehouse_name}</td>
+                          <td className="px-4 py-1.5 text-sm font-mono text-right text-muted-foreground">{r.current_stock}</td>
+                          <td className={`px-4 py-1.5 text-sm font-mono text-right font-semibold ${changed ? "text-stock-in" : ""}`}>
+                            {r.quantity}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
