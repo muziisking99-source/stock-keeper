@@ -180,6 +180,66 @@ export default function SalesClearance() {
     XLSX.writeFile(wb, "stock_reconciliation_template.xlsx");
   }, []);
 
+  const downloadReport = useCallback(() => {
+    if (changedRows.length === 0) {
+      toast.info("No changes to report");
+      return;
+    }
+    const wb = XLSX.utils.book_new();
+
+    const inRows = changedRows.filter((r) => r.delta > 0);
+    const outRows = changedRows.filter((r) => r.delta < 0);
+
+    const summary = [
+      ["Stock Reconciliation Report"],
+      ["Source file", fileName],
+      ["Generated", new Date().toLocaleString()],
+      [],
+      ["Stock In — units", totals.inUnits],
+      ["Stock In — line items", totals.inLines],
+      ["Stock Out — units", totals.outUnits],
+      ["Stock Out — line items", totals.outLines],
+      ["Unchanged line items", unchangedRows.length],
+      ["Errors (skipped)", errorRows.length],
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summary);
+    wsSummary["!cols"] = [{ wch: 26 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    const buildSheet = (rows: ParsedRow[]) =>
+      [
+        ["Item Code", "Warehouse", "Previous Stock", "New Stock", "Change"],
+        ...rows.map((r) => [
+          r.item_code,
+          r.warehouse_name,
+          r.current_stock,
+          r.new_quantity,
+          r.delta,
+        ]),
+      ];
+
+    const wsIn = XLSX.utils.aoa_to_sheet(buildSheet(inRows));
+    wsIn["!cols"] = [{ wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, wsIn, "Stock In");
+
+    const wsOut = XLSX.utils.aoa_to_sheet(buildSheet(outRows));
+    wsOut["!cols"] = [{ wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, wsOut, "Stock Out");
+
+    if (errorRows.length > 0) {
+      const wsErr = XLSX.utils.aoa_to_sheet([
+        ["Row", "Item Code", "Warehouse", "Quantity", "Error"],
+        ...errorRows.map((r) => [r.rowNum, r.item_code, r.warehouse_name, r.new_quantity, r.error ?? ""]),
+      ]);
+      wsErr["!cols"] = [{ wch: 6 }, { wch: 18 }, { wch: 22 }, { wch: 10 }, { wch: 32 }];
+      XLSX.utils.book_append_sheet(wb, wsErr, "Errors");
+    }
+
+    const safeName = fileName.replace(/\.[^.]+$/, "") || "reconciliation";
+    XLSX.writeFile(wb, `${safeName}_report.xlsx`);
+    toast.success("Report downloaded");
+  }, [changedRows, errorRows, unchangedRows.length, totals, fileName]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
