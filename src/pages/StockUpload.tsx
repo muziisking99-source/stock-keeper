@@ -1,9 +1,10 @@
 import { useState, useRef, useMemo, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X, Download } from "lucide-react";
-import { useProducts, useWarehouses, useAddStockMovement } from "@/hooks/useStockData";
+import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X, Download, PackagePlus } from "lucide-react";
+import { useProducts, useWarehouses, useAddStockMovement, useAddProducts } from "@/hooks/useStockData";
 import { toast } from "sonner";
 
 interface ParsedRow {
@@ -22,12 +23,14 @@ export default function StockUpload() {
   const { data: products } = useProducts();
   const { data: warehouses } = useWarehouses();
   const addMovement = useAddStockMovement();
+  const addProducts = useAddProducts();
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [state, setState] = useState<UploadState>("idle");
   const [progress, setProgress] = useState(0);
   const [fileName, setFileName] = useState("");
+  const [missingDrafts, setMissingDrafts] = useState<Record<string, { description: string; category: string }>>({});
 
   const productMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -40,6 +43,19 @@ export default function StockUpload() {
     warehouses?.forEach((w: any) => m.set(w.warehouse_name?.trim().toLowerCase(), w.id));
     return m;
   }, [warehouses]);
+
+  const reValidate = useCallback((parsed: ParsedRow[]) => {
+    return parsed.map((r) => {
+      const entry: ParsedRow = { rowNum: r.rowNum, item_code: r.item_code, warehouse_name: r.warehouse_name, quantity: r.quantity };
+      const pid = productMap.get(r.item_code.toLowerCase());
+      const wid = warehouseMap.get(r.warehouse_name.toLowerCase());
+      if (!pid) entry.error = "Product not found";
+      else if (!wid) entry.error = "Warehouse not found";
+      else if (!r.quantity || r.quantity <= 0) entry.error = "Invalid quantity";
+      else { entry.product_id = pid; entry.warehouse_id = wid; }
+      return entry;
+    });
+  }, [productMap, warehouseMap]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,10 +75,9 @@ export default function StockUpload() {
         const qtyRaw = row["Quantity"] ?? row["quantity"] ?? row["QTY"] ?? row["Qty"] ?? row["qty"] ?? "";
         const qty = parseInt(String(qtyRaw));
 
-        if (!itemCode) return; // skip blank rows
+        if (!itemCode) return;
 
         const entry: ParsedRow = { rowNum: idx + 2, item_code: itemCode, warehouse_name: whName, quantity: qty };
-
         const pid = productMap.get(itemCode.toLowerCase());
         const wid = warehouseMap.get(whName.toLowerCase());
 
@@ -82,6 +97,46 @@ export default function StockUpload() {
 
   const validRows = rows.filter((r) => !r.error);
   const errorRows = rows.filter((r) => !!r.error);
+
+  // Unique missing item codes (case-insensitive), preserving first-seen casing
+  const missingCodes = useMemo(() => {
+    const seen = new Map<string, string>();
+    rows.forEach((r) => {
+      if (r.error === "Product not found") {
+        const key = r.item_code.toLowerCase();
+        if (!seen.has(key)) seen.set(key, r.item_code);
+      }
+    });
+    return Array.from(seen.values());
+  }, [rows]);
+
+  const otherErrorRows = errorRows.filter((r) => r.error !== "Product not found");
+
+  const updateDraft = (code: string, field: "description" | "category", value: string) => {
+    setMissingDrafts((prev) => ({
+      ...prev,
+      [code]: { description: prev[code]?.description ?? "", category: prev[code]?.category ?? "", [field]: value },
+    }));
+  };
+
+  const handleCreateMissing = async () => {
+    const payload = missingCodes.map((code) => ({
+      item_code: code,
+      item_description: missingDrafts[code]?.description?.trim() || null,
+      category: missingDrafts[code]?.category?.trim() || null,
+    }));
+    try {
+      await addProducts.mutateAsync(payload);
+      toast.success(`Added ${payload.length} new product${payload.length === 1 ? "" : "s"}`);
+      setMissingDrafts({});
+      // Re-validate after a tick — productMap will refresh via query invalidation
+      setTimeout(() => {
+        setRows((curr) => reValidate(curr));
+      }, 300);
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to add products");
+    }
+  };
 
   const handleUpload = async () => {
     if (validRows.length === 0) return;
@@ -117,6 +172,7 @@ export default function StockUpload() {
     setState("idle");
     setProgress(0);
     setFileName("");
+    setMissingDrafts({});
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -177,25 +233,94 @@ export default function StockUpload() {
           </div>
 
           {/* Summary */}
-          <div className="flex gap-4">
+          <div className="flex gap-4 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="h-4 w-4 text-stock-in" />
               <span className="font-mono">{validRows.length}</span> valid
             </div>
-            {errorRows.length > 0 && (
+            {missingCodes.length > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <PackagePlus className="h-4 w-4 text-primary" />
+                <span className="font-mono">{missingCodes.length}</span> missing product{missingCodes.length === 1 ? "" : "s"}
+              </div>
+            )}
+            {otherErrorRows.length > 0 && (
               <div className="flex items-center gap-2 text-sm">
                 <AlertTriangle className="h-4 w-4 text-stock-transfer" />
-                <span className="font-mono">{errorRows.length}</span> errors
+                <span className="font-mono">{otherErrorRows.length}</span> other error{otherErrorRows.length === 1 ? "" : "s"}
               </div>
             )}
           </div>
 
-          {/* Error rows */}
-          {errorRows.length > 0 && (
+          {/* Missing products: inline create */}
+          {state === "parsed" && missingCodes.length > 0 && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-sm font-semibold flex items-center gap-2">
+                    <PackagePlus className="h-4 w-4" />
+                    Add missing products
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    These item codes don't exist yet. Add a description and category (optional), then create them so the upload can continue.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleCreateMissing}
+                  disabled={addProducts.isPending}
+                  className="gap-2"
+                >
+                  <PackagePlus className="h-4 w-4" />
+                  {addProducts.isPending ? "Adding…" : `Add ${missingCodes.length} product${missingCodes.length === 1 ? "" : "s"}`}
+                </Button>
+              </div>
+
+              <div className="rounded-lg border border-border/60 overflow-hidden bg-background">
+                <div className="max-h-72 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 sticky top-0">
+                      <tr className="border-b border-border/60">
+                        <th className="px-3 py-2 text-left text-[11px] uppercase tracking-wider font-mono">Item Code</th>
+                        <th className="px-3 py-2 text-left text-[11px] uppercase tracking-wider">Description</th>
+                        <th className="px-3 py-2 text-left text-[11px] uppercase tracking-wider">Category</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {missingCodes.map((code) => (
+                        <tr key={code} className="border-b border-border/60 last:border-b-0">
+                          <td className="px-3 py-1.5 font-mono text-sm">{code}</td>
+                          <td className="px-3 py-1.5">
+                            <Input
+                              value={missingDrafts[code]?.description ?? ""}
+                              onChange={(e) => updateDraft(code, "description", e.target.value)}
+                              placeholder="Optional description"
+                              className="h-8 text-sm"
+                            />
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <Input
+                              value={missingDrafts[code]?.category ?? ""}
+                              onChange={(e) => updateDraft(code, "category", e.target.value)}
+                              placeholder="Optional category"
+                              className="h-8 text-sm"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Other error rows */}
+          {otherErrorRows.length > 0 && (
             <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-destructive">Rows with errors (will be skipped)</p>
               <div className="max-h-40 overflow-y-auto space-y-1">
-                {errorRows.map((r) => (
+                {otherErrorRows.map((r) => (
                   <p key={r.rowNum} className="text-xs font-mono">
                     Row {r.rowNum}: <span className="text-muted-foreground">{r.item_code}</span> — {r.error}
                   </p>
