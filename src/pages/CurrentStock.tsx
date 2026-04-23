@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useStockLevels, useWarehouses } from "@/hooks/useStockData";
+import { useStockLevels, useWarehouses, useAddStockMovement } from "@/hooks/useStockData";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -9,8 +9,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { X, Trash2 } from "lucide-react";
 import DeleteStockDialog from "@/components/DeleteStockDialog";
+import { toast } from "sonner";
 
 type SortOption = "code-asc" | "code-desc" | "stock-high" | "stock-low" | "desc-asc";
 
@@ -23,9 +35,12 @@ interface DeleteTarget {
   current_stock: number;
 }
 
+const rowKey = (sl: any) => `${sl.product_id}__${sl.warehouse_id}`;
+
 export default function CurrentStock() {
   const { data: stockLevels, isLoading: stockLoading } = useStockLevels();
   const { data: warehouses, isLoading: warehousesLoading } = useWarehouses();
+  const addMovement = useAddStockMovement();
   const isLoading = stockLoading || warehousesLoading;
 
   const [search, setSearch] = useState("");
@@ -33,6 +48,10 @@ export default function CurrentStock() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("code-asc");
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkRunning, setBulkRunning] = useState(false);
 
   // Derive unique categories from stock data
   const categories = useMemo(() => {
@@ -81,6 +100,43 @@ export default function CurrentStock() {
     return map;
   }, [filtered]);
 
+  const allKeys = useMemo(() => filtered.map((sl: any) => rowKey(sl)), [filtered]);
+  const allSelected = allKeys.length > 0 && allKeys.every((k) => selected.has(k));
+  const someSelected = selected.size > 0 && !allSelected;
+
+  const toggleRow = (sl: any) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const k = rowKey(sl);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelected((prev) => {
+      if (allKeys.every((k) => prev.has(k))) {
+        // unselect all visible
+        const next = new Set(prev);
+        allKeys.forEach((k) => next.delete(k));
+        return next;
+      }
+      return new Set(allKeys);
+    });
+  };
+
+  const toggleWarehouse = (items: any[]) => {
+    setSelected((prev) => {
+      const keys = items.map(rowKey);
+      const allOn = keys.every((k) => prev.has(k));
+      const next = new Set(prev);
+      if (allOn) keys.forEach((k) => next.delete(k));
+      else keys.forEach((k) => next.add(k));
+      return next;
+    });
+  };
+
   const hasActiveFilters = warehouseFilter !== "all" || categoryFilter !== "all" || search.trim() !== "";
 
   const clearFilters = () => {
@@ -88,6 +144,45 @@ export default function CurrentStock() {
     setWarehouseFilter("all");
     setCategoryFilter("all");
     setSortBy("code-asc");
+  };
+
+  const selectedItems = useMemo(
+    () => filtered.filter((sl: any) => selected.has(rowKey(sl))),
+    [filtered, selected]
+  );
+
+  const selectedTotalUnits = selectedItems.reduce(
+    (sum, sl: any) => sum + (sl.current_stock ?? 0),
+    0
+  );
+
+  const runBulkDelete = async () => {
+    if (selectedItems.length === 0) return;
+    setBulkRunning(true);
+    let ok = 0;
+    let fail = 0;
+    for (const sl of selectedItems) {
+      const qty = sl.current_stock ?? 0;
+      if (qty <= 0) continue;
+      try {
+        await addMovement.mutateAsync({
+          product_id: sl.product_id,
+          warehouse_id: sl.warehouse_id,
+          movement_type: "OUT",
+          quantity: qty,
+          reference_note: "Bulk clear from Current Stock",
+        });
+        ok++;
+      } catch (err: any) {
+        fail++;
+        toast.error(`${sl.item_code}: ${err.message ?? "Failed"}`);
+      }
+    }
+    setBulkRunning(false);
+    setBulkOpen(false);
+    setSelected(new Set());
+    if (ok > 0) toast.success(`Cleared stock for ${ok} item${ok === 1 ? "" : "s"}`);
+    if (fail > 0) toast.error(`${fail} item${fail === 1 ? "" : "s"} failed`);
   };
 
   return (
@@ -156,10 +251,40 @@ export default function CurrentStock() {
         )}
       </div>
 
-      {/* Results count */}
-      <p className="text-xs text-muted-foreground font-mono">
-        {filtered.length} item{filtered.length !== 1 ? "s" : ""} found
-      </p>
+      {/* Selection toolbar */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-xs text-muted-foreground font-mono">
+          {filtered.length} item{filtered.length !== 1 ? "s" : ""} found
+          {selected.size > 0 && (
+            <span className="ml-3 text-foreground">
+              · {selected.size} selected ({selectedTotalUnits} units)
+            </span>
+          )}
+        </p>
+        <div className="flex items-center gap-2">
+          {filtered.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleAll}
+              className="h-8 text-xs"
+            >
+              {allSelected ? "Unselect all" : "Select all"}
+            </Button>
+          )}
+          {selected.size > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkOpen(true)}
+              className="h-8 text-xs gap-1"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete {selected.size} item{selected.size === 1 ? "" : "s"}
+            </Button>
+          )}
+        </div>
+      </div>
 
       {isLoading ? (
         <div className="rounded-2xl border border-border/70 bg-card/95 p-8 text-center text-sm text-muted-foreground">
@@ -171,64 +296,98 @@ export default function CurrentStock() {
         </div>
       ) : (
         <div className="space-y-5">
-          {Array.from(stockByWarehouse.entries()).map(([warehouseId, { warehouse_name, items }]) => (
-            <div key={warehouseId} className="bg-card/95 border border-border/70 rounded-2xl shadow-sm">
-              <div className="px-5 py-4 border-b border-border/70 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                    {warehouse_name}
-                  </h2>
-                  <p className="mt-1 text-xs text-muted-foreground">{items.length} SKUs</p>
+          {Array.from(stockByWarehouse.entries()).map(([warehouseId, { warehouse_name, items }]) => {
+            const whKeys = items.map(rowKey);
+            const whAll = whKeys.every((k) => selected.has(k));
+            const whSome = whKeys.some((k) => selected.has(k)) && !whAll;
+            return (
+              <div key={warehouseId} className="bg-card/95 border border-border/70 rounded-2xl shadow-sm">
+                <div className="px-5 py-4 border-b border-border/70 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                      {warehouse_name}
+                    </h2>
+                    <p className="mt-1 text-xs text-muted-foreground">{items.length} SKUs</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleWarehouse(items)}
+                    className="h-7 text-xs"
+                  >
+                    {whAll ? "Unselect warehouse" : "Select warehouse"}
+                  </Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-t border-border/60 text-sm">
+                    <thead>
+                      <tr className="border-b border-border/60 bg-muted/40">
+                        <th className="px-3 py-2 w-10">
+                          <Checkbox
+                            checked={whAll ? true : whSome ? "indeterminate" : false}
+                            onCheckedChange={() => toggleWarehouse(items)}
+                            aria-label="Select warehouse rows"
+                          />
+                        </th>
+                        <th className="px-4 py-2 text-left font-mono text-[11px] uppercase tracking-[0.18em]">Item Code</th>
+                        <th className="px-4 py-2 text-left text-[11px] uppercase tracking-[0.18em]">Description</th>
+                        <th className="px-4 py-2 text-left text-[11px] uppercase tracking-[0.18em]">Category</th>
+                        <th className="px-4 py-2 text-right text-[11px] uppercase tracking-[0.18em]">Stock</th>
+                        <th className="px-4 py-2 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((sl: any) => {
+                        const stock = sl.current_stock ?? 0;
+                        const colorClass = stock <= 5 ? "text-stock-transfer" : "text-stock-in";
+                        const k = rowKey(sl);
+                        const isChecked = selected.has(k);
+                        return (
+                          <tr
+                            key={k}
+                            className={`border-b border-border/60 last:border-b-0 hover:bg-muted/40 ${
+                              isChecked ? "bg-primary/5" : ""
+                            }`}
+                          >
+                            <td className="px-3 py-2">
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => toggleRow(sl)}
+                                aria-label={`Select ${sl.item_code}`}
+                              />
+                            </td>
+                            <td className="px-4 py-2 font-mono text-sm font-medium">{sl.item_code}</td>
+                            <td className="px-4 py-2 text-sm">{sl.item_description || "—"}</td>
+                            <td className="px-4 py-2 text-sm text-muted-foreground">{sl.category || "—"}</td>
+                            <td className={`px-4 py-2 text-sm font-mono text-right font-semibold ${colorClass}`}>{stock}</td>
+                            <td className="px-2 py-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={() =>
+                                  setDeleteTarget({
+                                    product_id: sl.product_id,
+                                    warehouse_id: sl.warehouse_id,
+                                    item_code: sl.item_code,
+                                    item_description: sl.item_description,
+                                    warehouse_name: warehouse_name,
+                                    current_stock: stock,
+                                  })
+                                }
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full border-t border-border/60 text-sm">
-                  <thead>
-                    <tr className="border-b border-border/60 bg-muted/40">
-                      <th className="px-4 py-2 text-left font-mono text-[11px] uppercase tracking-[0.18em]">Item Code</th>
-                      <th className="px-4 py-2 text-left text-[11px] uppercase tracking-[0.18em]">Description</th>
-                      <th className="px-4 py-2 text-left text-[11px] uppercase tracking-[0.18em]">Category</th>
-                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-[0.18em]">Stock</th>
-                      <th className="px-4 py-2 w-10"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((sl: any) => {
-                      const stock = sl.current_stock ?? 0;
-                      const colorClass = stock <= 5 ? "text-stock-transfer" : "text-stock-in";
-                      return (
-                        <tr key={`${sl.product_id}-${warehouseId}`} className="border-b border-border/60 last:border-b-0 hover:bg-muted/40">
-                          <td className="px-4 py-2 font-mono text-sm font-medium">{sl.item_code}</td>
-                          <td className="px-4 py-2 text-sm">{sl.item_description || "—"}</td>
-                          <td className="px-4 py-2 text-sm text-muted-foreground">{sl.category || "—"}</td>
-                          <td className={`px-4 py-2 text-sm font-mono text-right font-semibold ${colorClass}`}>{stock}</td>
-                          <td className="px-2 py-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                              onClick={() =>
-                                setDeleteTarget({
-                                  product_id: sl.product_id,
-                                  warehouse_id: sl.warehouse_id,
-                                  item_code: sl.item_code,
-                                  item_description: sl.item_description,
-                                  warehouse_name: warehouse_name,
-                                  current_stock: stock,
-                                })
-                              }
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -237,6 +396,30 @@ export default function CurrentStock() {
         onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
         item={deleteTarget}
       />
+
+      <AlertDialog open={bulkOpen} onOpenChange={(o) => !bulkRunning && setBulkOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear stock for {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create OUT movements that remove the full current stock
+              ({selectedTotalUnits} units total) for every selected row. You can
+              still see the history under Stock Movements. This cannot be undone
+              from this screen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkRunning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); runBulkDelete(); }}
+              disabled={bulkRunning}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkRunning ? "Clearing…" : "Yes, clear stock"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
