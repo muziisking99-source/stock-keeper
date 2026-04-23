@@ -436,7 +436,7 @@ export default function StockUpload() {
             {state === "parsed" && validRows.length > 0 && (
               <Button onClick={handleUpload} className="gap-2">
                 <Upload className="h-4 w-4" />
-                Upload {validRows.length} entries
+                Replace stock for {validRows.length} item{validRows.length === 1 ? "" : "s"}
               </Button>
             )}
             {state === "done" && (
