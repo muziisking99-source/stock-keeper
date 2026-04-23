@@ -21,7 +21,7 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/current-stock", label: "Current Stock", icon: BarChart3 },
   { to: "/stock-upload", label: "Stock Upload", icon: FileUp },
-  { to: "/sales-clearance", label: "Sales Clearing", icon: ClipboardMinus },
+  { to: "/sales-clearance", label: "Stock Reconciliation", icon: ClipboardMinus },
 ];
 
 const movementSubItems = [
