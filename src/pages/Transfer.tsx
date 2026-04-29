@@ -110,14 +110,14 @@ export default function Transfer() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3 mb-2">
+    <div className="space-y-5 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
         <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">Internal</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Transfer</h1>
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">Internal</p>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Transfer</h1>
           <p className="mt-1 text-xs text-muted-foreground">Transfer stock between any warehouses.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {allTransferMovements.length > 0 && (
             <Button variant="outline" size="sm" onClick={handleDownloadReport}>
               <FileText className="h-4 w-4 mr-2" /> Summary PDF
