@@ -318,7 +318,63 @@ export default function CurrentStock() {
                     {whAll ? "Unselect warehouse" : "Select warehouse"}
                   </Button>
                 </div>
-                <div className="overflow-x-auto">
+                {/* Mobile card list */}
+                <div className="md:hidden divide-y divide-border/60">
+                  {items.map((sl: any) => {
+                    const stock = sl.current_stock ?? 0;
+                    const colorClass = stock <= 5 ? "text-stock-transfer" : "text-stock-in";
+                    const k = rowKey(sl);
+                    const isChecked = selected.has(k);
+                    return (
+                      <div
+                        key={k}
+                        className={`flex items-start gap-3 p-3 ${isChecked ? "bg-primary/5" : ""}`}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={() => toggleRow(sl)}
+                          aria-label={`Select ${sl.item_code}`}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-sm font-semibold truncate">{sl.item_code}</span>
+                            <span className={`font-mono text-base font-bold tabular-nums ${colorClass}`}>{stock}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                            {sl.item_description || "—"}
+                          </p>
+                          {sl.category && (
+                            <span className="inline-block mt-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+                              {sl.category}
+                            </span>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 w-9 p-0 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() =>
+                            setDeleteTarget({
+                              product_id: sl.product_id,
+                              warehouse_id: sl.warehouse_id,
+                              item_code: sl.item_code,
+                              item_description: sl.item_description,
+                              warehouse_name: warehouse_name,
+                              current_stock: stock,
+                            })
+                          }
+                          aria-label={`Delete ${sl.item_code}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full border-t border-border/60 text-sm">
                     <thead>
                       <tr className="border-b border-border/60 bg-muted/40">
