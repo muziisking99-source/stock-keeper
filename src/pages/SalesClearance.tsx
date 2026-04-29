@@ -241,19 +241,19 @@ export default function SalesClearance() {
   }, [changedRows, errorRows, unchangedRows.length, totals, fileName]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-5 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between flex-wrap gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">End of Day</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Stock Reconciliation</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">End of Day</p>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Stock Reconciliation</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Upload your actual current stock counts. The system compares them to the system stock and creates the IN/OUT movements needed to match. Columns:{" "}
             <span className="font-mono text-xs">Item Code</span>,{" "}
             <span className="font-mono text-xs">Warehouse</span>,{" "}
             <span className="font-mono text-xs">Quantity</span>
           </p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2" onClick={downloadTemplate}>
+        <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" onClick={downloadTemplate}>
           <Download className="h-4 w-4" />
           Download Template
         </Button>
