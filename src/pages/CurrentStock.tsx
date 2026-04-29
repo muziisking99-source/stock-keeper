@@ -197,20 +197,20 @@ export default function CurrentStock() {
       </div>
 
       {/* Filters bar */}
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[200px] max-w-xs space-y-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end gap-3">
+        <div className="space-y-1 sm:col-span-2 lg:flex-1 lg:min-w-[200px] lg:max-w-xs">
           <label className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">Search</label>
           <Input
             placeholder="Code or description…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 text-sm"
+            className="h-10 sm:h-9 text-sm"
           />
         </div>
-        <div className="min-w-[160px] space-y-1">
+        <div className="space-y-1 lg:min-w-[160px]">
           <label className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">Warehouse</label>
           <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-10 sm:h-9 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Warehouses</SelectItem>
               {(warehouses ?? []).map((w: any) => (
@@ -219,10 +219,10 @@ export default function CurrentStock() {
             </SelectContent>
           </Select>
         </div>
-        <div className="min-w-[160px] space-y-1">
+        <div className="space-y-1 lg:min-w-[160px]">
           <label className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">Category</label>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-10 sm:h-9 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
               {categories.map((c) => (
@@ -231,10 +231,10 @@ export default function CurrentStock() {
             </SelectContent>
           </Select>
         </div>
-        <div className="min-w-[160px] space-y-1">
+        <div className="space-y-1 lg:min-w-[160px]">
           <label className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">Sort By</label>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-10 sm:h-9 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="code-asc">Code A → Z</SelectItem>
               <SelectItem value="code-desc">Code Z → A</SelectItem>
@@ -245,8 +245,8 @@ export default function CurrentStock() {
           </Select>
         </div>
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 text-xs gap-1">
-            <X className="h-3 w-3" /> Clear
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 text-xs gap-1 sm:col-span-2 lg:col-span-1 lg:w-auto">
+            <X className="h-3 w-3" /> Clear filters
           </Button>
         )}
       </div>
