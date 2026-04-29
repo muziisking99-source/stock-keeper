@@ -28,20 +28,20 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 md:space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
             Live Snapshot
           </p>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
             Control Tower
           </h1>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-mono uppercase tracking-[0.18em]">
-            Warehouses Synced: {totalWarehouses}
+          <span className="font-mono uppercase tracking-[0.18em] text-[10px] sm:text-xs">
+            {totalWarehouses} Warehouses
           </span>
         </div>
       </div>

@@ -174,23 +174,25 @@ export default function MovementLineItems({ lines, products, onUpdate, onRemove,
                   </span>
                 )}
               </div>
-              <div className="flex gap-2 items-start">
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-start">
                 <ProductSearch
                   products={products}
                   value={line.productId}
                   onChange={(v) => onUpdate(line.id, "productId", v)}
                   accentClass={accentClass}
                 />
-                <Input
-                  type="number" min="1" value={line.quantity}
-                  onChange={(e) => onUpdate(line.id, "quantity", e.target.value)}
-                  placeholder="Qty" className="w-20 h-9 text-xs font-mono bg-background text-center"
-                />
-                <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(line.id)}
-                  disabled={lines.length <= 1}
-                  className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex gap-2">
+                  <Input
+                    type="number" min="1" value={line.quantity} inputMode="numeric"
+                    onChange={(e) => onUpdate(line.id, "quantity", e.target.value)}
+                    placeholder="Qty" className="flex-1 sm:w-20 sm:flex-none h-10 sm:h-9 text-sm sm:text-xs font-mono bg-background text-center"
+                  />
+                  <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(line.id)}
+                    disabled={lines.length <= 1}
+                    className="h-10 w-10 sm:h-9 sm:w-9 p-0 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg">
+                    <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                  </Button>
+                </div>
               </div>
             </div>
           );
