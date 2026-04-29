@@ -6,85 +6,88 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 215 25% 12%;
+    /* SpareLube brand: red #E30613, black #0B0B0D, silver/grey */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 12%;
+    --card-foreground: 0 0% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 12%;
+    --popover-foreground: 0 0% 8%;
 
-    --primary: 215 60% 22%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 354 96% 45%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 15% 93%;
-    --secondary-foreground: 215 25% 12%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 10%;
 
-    --muted: 210 15% 95%;
-    --muted-foreground: 215 10% 48%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 38%;
 
-    --accent: 210 15% 90%;
-    --accent-foreground: 215 25% 12%;
+    --accent: 0 0% 92%;
+    --accent-foreground: 0 0% 8%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 78% 42%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 215 60% 22%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 354 96% 45%;
 
-    --radius: 0.375rem;
+    --radius: 0.5rem;
 
+    /* Operational color-coding (preserved per project rules) */
     --stock-in: 152 60% 36%;
     --stock-in-foreground: 0 0% 100%;
-    --stock-out: 0 72% 51%;
+    --stock-out: 354 96% 45%;        /* SpareLube red for OUT/Issuing */
     --stock-out-foreground: 0 0% 100%;
     --stock-transfer: 38 92% 50%;
     --stock-transfer-foreground: 0 0% 10%;
-    --stock-zero: 215 10% 65%;
+    --stock-zero: 0 0% 65%;
 
-    --sidebar-background: 215 60% 16%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 210 40% 98%;
-    --sidebar-primary-foreground: 215 60% 16%;
-    --sidebar-accent: 215 50% 22%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 215 40% 24%;
-    --sidebar-ring: 210 40% 98%;
+    /* Sidebar — always dark to match the logo's black shield */
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 88%;
+    --sidebar-primary: 354 96% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 354 96% 50%;
 
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
 
   .dark {
-    --background: 215 25% 8%;
-    --foreground: 210 20% 90%;
-    --card: 215 25% 11%;
-    --card-foreground: 210 20% 90%;
-    --popover: 215 25% 11%;
-    --popover-foreground: 210 20% 90%;
-    --primary: 210 60% 55%;
-    --primary-foreground: 215 25% 8%;
-    --secondary: 215 20% 18%;
-    --secondary-foreground: 210 20% 90%;
-    --muted: 215 20% 15%;
-    --muted-foreground: 215 10% 55%;
-    --accent: 215 20% 18%;
-    --accent-foreground: 210 20% 90%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 215 20% 20%;
-    --input: 215 20% 20%;
-    --ring: 210 60% 55%;
-    --sidebar-background: 215 30% 6%;
-    --sidebar-foreground: 210 20% 85%;
-    --sidebar-primary: 210 60% 55%;
-    --sidebar-primary-foreground: 215 25% 8%;
-    --sidebar-accent: 215 25% 12%;
-    --sidebar-accent-foreground: 210 20% 85%;
-    --sidebar-border: 215 25% 14%;
-    --sidebar-ring: 210 60% 55%;
+    --background: 0 0% 6%;
+    --foreground: 0 0% 92%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 92%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 92%;
+    --primary: 354 96% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 92%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 16%;
+    --accent-foreground: 0 0% 92%;
+    --destructive: 0 70% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 354 96% 52%;
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 88%;
+    --sidebar-primary: 354 96% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 88%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 354 96% 52%;
   }
 }
 
@@ -93,12 +96,20 @@
     @apply border-border;
   }
 
-  body {
+  html, body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+    overflow-x: hidden;
   }
 
   code, .font-mono {
     font-family: var(--font-mono);
+  }
+
+  /* Prevent iOS zoom on focus by ensuring inputs are at least 16px */
+  @media (max-width: 767px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
   }
 }

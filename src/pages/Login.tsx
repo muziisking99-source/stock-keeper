@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import sparelubeLogo from "@/assets/sparelube-logo.png";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -29,18 +30,25 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),radial-gradient(circle_at_bottom,_rgba(129,140,248,0.16),_transparent_55%)] bg-background/95">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-[radial-gradient(circle_at_top,_hsl(var(--primary)/0.18),_transparent_55%),radial-gradient(circle_at_bottom,_hsl(0_0%_0%/0.4),_transparent_55%)] bg-background">
       <div className="w-full max-w-sm mx-auto">
-        <div className="rounded-2xl border border-border/60 bg-card/90 shadow-[0_18px_60px_rgba(15,23,42,0.35)] ring-1 ring-white/5 p-8">
+        <div className="flex flex-col items-center mb-6">
+          <img
+            src={sparelubeLogo}
+            alt="SpareLube — Auto Lubricant Distributors"
+            className="w-44 sm:w-52 h-auto drop-shadow-[0_8px_24px_rgba(227,6,19,0.25)]"
+          />
+        </div>
+        <div className="rounded-2xl border border-border/60 bg-card/95 shadow-[0_18px_60px_rgba(0,0,0,0.25)] ring-1 ring-black/5 p-6 sm:p-8">
           <div className="text-center mb-6">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">StockTracker</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">Stock Control</h1>
             <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-[0.18em]">
               Sign In
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -49,9 +57,12 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
+                className="h-11"
+                autoComplete="email"
+                inputMode="email"
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -61,9 +72,11 @@ export default function Login() {
                 placeholder="••••••••"
                 required
                 minLength={6}
+                className="h-11"
+                autoComplete="current-password"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-11" disabled={loading}>
               {loading ? "Please wait..." : "Sign In"}
             </Button>
           </form>
