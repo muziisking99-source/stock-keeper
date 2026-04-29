@@ -28,31 +28,31 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 md:space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
             Live Snapshot
           </p>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
             Control Tower
           </h1>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-mono uppercase tracking-[0.18em]">
-            Warehouses Synced: {totalWarehouses}
+          <span className="font-mono uppercase tracking-[0.18em] text-[10px] sm:text-xs">
+            {totalWarehouses} Warehouses
           </span>
         </div>
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
-        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-sky-500/10 via-card/90 to-sky-400/5 p-5 shadow-sm">
-          <div className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-sky-400/15 blur-2xl" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-2">
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-primary/10 via-card to-primary/5 p-4 sm:p-5 shadow-sm">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-primary/15 blur-2xl" />
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
                 <Package className="h-4 w-4" />
               </div>
               <div>
@@ -61,21 +61,21 @@ export default function Dashboard() {
                 </span>
               </div>
             </div>
-            <span className="rounded-full border border-sky-400/40 bg-sky-500/10 px-2 py-0.5 text-[10px] font-mono text-sky-200">
+            <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-mono text-primary">
               Catalog
             </span>
           </div>
-          <p className="text-3xl md:text-4xl font-semibold font-mono">{totalProducts}</p>
+          <p className="text-2xl sm:text-3xl md:text-4xl font-semibold font-mono">{totalProducts}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Unique SKUs currently tracked across all warehouses.
           </p>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-indigo-500/10 via-card/90 to-indigo-400/5 p-5 shadow-sm">
-          <div className="pointer-events-none absolute -left-8 -bottom-16 h-32 w-32 rounded-full bg-indigo-400/15 blur-2xl" />
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-foreground/10 via-card to-muted/30 p-4 sm:p-5 shadow-sm">
+          <div className="pointer-events-none absolute -left-8 -bottom-16 h-32 w-32 rounded-full bg-foreground/10 blur-2xl" />
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-foreground/10 text-foreground">
                 <Warehouse className="h-4 w-4" />
               </div>
               <div>
@@ -84,21 +84,21 @@ export default function Dashboard() {
                 </span>
               </div>
             </div>
-            <span className="rounded-full border border-indigo-400/40 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-mono text-indigo-200">
+            <span className="rounded-full border border-foreground/30 bg-foreground/5 px-2 py-0.5 text-[10px] font-mono text-foreground/80">
               Network
             </span>
           </div>
-          <p className="text-3xl md:text-4xl font-semibold font-mono">{totalWarehouses}</p>
+          <p className="text-2xl sm:text-3xl md:text-4xl font-semibold font-mono">{totalWarehouses}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Active storage locations participating in live stock sync.
           </p>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-amber-500/10 via-card/90 to-amber-400/5 p-5 shadow-sm">
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-amber-500/10 via-card to-amber-400/5 p-4 sm:p-5 shadow-sm">
           <div className="pointer-events-none absolute right-[-14px] bottom-[-36px] h-32 w-32 rounded-full bg-amber-400/15 blur-2xl" />
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-300">
                 <AlertTriangle className="h-4 w-4" />
               </div>
               <div>
@@ -107,11 +107,11 @@ export default function Dashboard() {
                 </span>
               </div>
             </div>
-            <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-mono text-amber-100">
+            <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-mono text-amber-700 dark:text-amber-100">
               Risk Watch
             </span>
           </div>
-          <p className="text-3xl md:text-4xl font-semibold font-mono">{lowStockCount}</p>
+          <p className="text-2xl sm:text-3xl md:text-4xl font-semibold font-mono">{lowStockCount}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Items between 1–5 units remaining across any warehouse.
           </p>

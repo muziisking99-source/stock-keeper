@@ -125,13 +125,13 @@ export default function Products() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3 mb-2">
+    <div className="space-y-5 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
         <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
             Catalog
           </p>
-          <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Products</h1>
         </div>
         <div className="flex items-center gap-3">
           <input
@@ -146,7 +146,7 @@ export default function Products() {
           />
           <Button
             variant="outline"
-            className="border-dashed border-2 border-border/70 bg-background/70 hover:bg-muted/60"
+            className="border-dashed border-2 border-border/70 bg-background/70 hover:bg-muted/60 w-full sm:w-auto"
             onClick={() => fileInputRef.current?.click()}
           >
             <FileSpreadsheet className="h-4 w-4 mr-2" />

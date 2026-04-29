@@ -59,13 +59,13 @@ export default function Warehouses() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 md:space-y-6">
       <div className="flex items-center justify-between gap-3 mb-2">
         <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">
             Master Data
           </p>
-          <h1 className="text-2xl font-semibold tracking-tight">Warehouses</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Warehouses</h1>
         </div>
       </div>
 
