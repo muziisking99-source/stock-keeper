@@ -828,7 +828,7 @@ export default function SalesClearance() {
                   className="gap-2 w-full sm:w-auto h-11 sm:h-10"
                 >
                   <FileDown className="h-4 w-4" />
-                  Download IN/OUT Report
+                  Download PDF Report
                 </Button>
                 <Button onClick={reset} className="gap-2 w-full sm:w-auto h-11 sm:h-10">
                   Upload another file
