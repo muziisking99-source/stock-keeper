@@ -292,71 +292,231 @@ export default function SalesClearance() {
     XLSX.writeFile(wb, "stock_reconciliation_template.xlsx");
   }, []);
 
-  const downloadReport = useCallback(() => {
+  const downloadReport = useCallback(async () => {
     if (resultRows.length === 0) {
       toast.info("Run the reconciliation first to generate a report");
       return;
     }
-    const wb = XLSX.utils.book_new();
 
-    const postedIn = resultRows.filter((r) => r.status === "in");
-    const postedOut = resultRows.filter((r) => r.status === "out");
-    const failed = resultRows.filter((r) => r.status === "error");
+    const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+    const autoTable = (autoTableMod as any).default;
 
-    const summary = [
-      ["Daily Stock Reconciliation Report"],
-      ["Source file", fileName],
-      ["Warehouse", MAIN_WAREHOUSE_NAME],
-      ["Movement date", new Date(yesterdayNoonISO()).toLocaleDateString()],
-      ["Generated", new Date().toLocaleString()],
-      [],
-      ["Stock In — units", postedIn.reduce((s, r) => s + r.row.quantity, 0)],
-      ["Stock In — line items", postedIn.length],
-      ["Stock Out — units", postedOut.reduce((s, r) => s + -r.row.quantity, 0)],
-      ["Stock Out — line items", postedOut.length],
-      ["Failed rows", failed.length],
-    ];
-    const wsSummary = XLSX.utils.aoa_to_sheet(summary);
-    wsSummary["!cols"] = [{ wch: 28 }, { wch: 32 }];
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+    // Aggregate per item: sum IN, sum OUT, net
+    type Agg = {
+      item_code: string;
+      item_description: string;
+      inUnits: number;
+      outUnits: number;
+      net: number;
+      lines: number;
+      failed: number;
+    };
+    const map = new Map<string, Agg>();
+    resultRows.forEach((r) => {
+      const key = r.row.item_code;
+      if (!map.has(key)) {
+        map.set(key, {
+          item_code: r.row.item_code,
+          item_description: r.row.item_description,
+          inUnits: 0,
+          outUnits: 0,
+          net: 0,
+          lines: 0,
+          failed: 0,
+        });
+      }
+      const agg = map.get(key)!;
+      agg.lines += 1;
+      if (r.status === "in") {
+        agg.inUnits += r.row.quantity;
+        agg.net += r.row.quantity;
+      } else if (r.status === "out") {
+        agg.outUnits += Math.abs(r.row.quantity);
+        agg.net += r.row.quantity;
+      } else if (r.status === "error") {
+        agg.failed += 1;
+      }
+      if (!agg.item_description && r.row.item_description) {
+        agg.item_description = r.row.item_description;
+      }
+    });
 
-    const buildSheet = (rs: typeof resultRows, signed: boolean) => [
-      ["Row", "Item Code", "Item Description", "Quantity"],
-      ...rs.map((r) => [
-        r.row.rowNum,
-        r.row.item_code,
-        r.row.item_description,
-        signed ? r.row.quantity : Math.abs(r.row.quantity),
+    const items = Array.from(map.values()).sort((a, b) =>
+      a.item_code.localeCompare(b.item_code)
+    );
+
+    const totalIn = items.reduce((s, i) => s + i.inUnits, 0);
+    const totalOut = items.reduce((s, i) => s + i.outUnits, 0);
+    const totalNet = totalIn - totalOut;
+    const totalFailed = items.reduce((s, i) => s + i.failed, 0);
+
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const movementDateStr = new Date(yesterdayNoonISO()).toLocaleDateString();
+    const generatedStr = new Date().toLocaleString();
+
+    // Header banner — SpareLube red
+    doc.setFillColor(227, 6, 19);
+    doc.rect(0, 0, pageWidth, 70, "F");
+    doc.setFillColor(11, 11, 13);
+    doc.rect(0, 70, pageWidth, 4, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text("SpareLube", 32, 32);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text("Daily Stock Reconciliation", 32, 50);
+
+    doc.setFontSize(9);
+    doc.text(`Movement date: ${movementDateStr}`, pageWidth - 32, 32, { align: "right" });
+    doc.text(`Generated: ${generatedStr}`, pageWidth - 32, 46, { align: "right" });
+    doc.text(`Warehouse: ${MAIN_WAREHOUSE_NAME}`, pageWidth - 32, 60, { align: "right" });
+
+    // Meta
+    doc.setTextColor(60, 60, 60);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Source: ${fileName}`, 32, 96);
+
+    // Summary boxes
+    const boxY = 110;
+    const boxH = 56;
+    const boxW = (pageWidth - 64 - 24) / 4;
+    const drawBox = (
+      x: number,
+      label: string,
+      value: string,
+      color: [number, number, number]
+    ) => {
+      doc.setDrawColor(230, 230, 230);
+      doc.setFillColor(250, 250, 250);
+      doc.roundedRect(x, boxY, boxW, boxH, 4, 4, "FD");
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      doc.setFont("helvetica", "normal");
+      doc.text(label.toUpperCase(), x + 10, boxY + 16);
+      doc.setFontSize(18);
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.setFont("helvetica", "bold");
+      doc.text(value, x + 10, boxY + 42);
+    };
+    drawBox(32, "Items", String(items.length), [40, 40, 40]);
+    drawBox(32 + (boxW + 8) * 1, "Stock In", `+${totalIn}`, [22, 163, 74]);
+    drawBox(32 + (boxW + 8) * 2, "Stock Out", `-${totalOut}`, [220, 38, 38]);
+    drawBox(
+      32 + (boxW + 8) * 3,
+      "Net Change",
+      `${totalNet >= 0 ? "+" : ""}${totalNet}`,
+      totalNet >= 0 ? [22, 163, 74] : [220, 38, 38]
+    );
+
+    // Per-item summary table
+    autoTable(doc, {
+      startY: boxY + boxH + 18,
+      head: [["Item Code", "Description", "Lines", "In", "Out", "Net"]],
+      body: items.map((i) => [
+        i.item_code,
+        i.item_description || "—",
+        String(i.lines),
+        i.inUnits > 0 ? `+${i.inUnits}` : "—",
+        i.outUnits > 0 ? `-${i.outUnits}` : "—",
+        `${i.net > 0 ? "+" : ""}${i.net}`,
       ]),
-    ];
+      foot: [
+        [
+          { content: "TOTAL", colSpan: 3, styles: { halign: "right", fontStyle: "bold" } },
+          { content: `+${totalIn}`, styles: { halign: "right", textColor: [22, 163, 74], fontStyle: "bold" } },
+          { content: `-${totalOut}`, styles: { halign: "right", textColor: [220, 38, 38], fontStyle: "bold" } },
+          {
+            content: `${totalNet >= 0 ? "+" : ""}${totalNet}`,
+            styles: {
+              halign: "right",
+              fontStyle: "bold",
+              textColor: totalNet >= 0 ? [22, 163, 74] : [220, 38, 38],
+            },
+          },
+        ],
+      ],
+      styles: { fontSize: 9, cellPadding: 5 },
+      headStyles: { fillColor: [11, 11, 13], textColor: [255, 255, 255], fontStyle: "bold" },
+      footStyles: { fillColor: [245, 245, 245], textColor: [40, 40, 40] },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      columnStyles: {
+        0: { cellWidth: 90, fontStyle: "bold" },
+        1: { cellWidth: "auto" },
+        2: { cellWidth: 40, halign: "right" },
+        3: { cellWidth: 55, halign: "right", textColor: [22, 163, 74] },
+        4: { cellWidth: 55, halign: "right", textColor: [220, 38, 38] },
+        5: { cellWidth: 55, halign: "right", fontStyle: "bold" },
+      },
+      didParseCell: (data: any) => {
+        if (data.section === "body" && data.column.index === 5) {
+          const item = items[data.row.index];
+          if (item) {
+            data.cell.styles.textColor =
+              item.net > 0 ? [22, 163, 74] : item.net < 0 ? [220, 38, 38] : [120, 120, 120];
+          }
+        }
+      },
+      margin: { left: 32, right: 32 },
+    });
 
-    const wsIn = XLSX.utils.aoa_to_sheet(buildSheet(postedIn, false));
-    wsIn["!cols"] = [{ wch: 6 }, { wch: 22 }, { wch: 36 }, { wch: 12 }];
-    XLSX.utils.book_append_sheet(wb, wsIn, "Stock In");
+    // Failed rows section
+    if (totalFailed > 0) {
+      const failedRows = resultRows.filter((r) => r.status === "error");
+      const finalY = (doc as any).lastAutoTable?.finalY ?? boxY + boxH + 60;
+      doc.setFontSize(11);
+      doc.setTextColor(220, 38, 38);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Failed rows (${totalFailed})`, 32, finalY + 28);
 
-    const wsOut = XLSX.utils.aoa_to_sheet(buildSheet(postedOut, false));
-    wsOut["!cols"] = [{ wch: 6 }, { wch: 22 }, { wch: 36 }, { wch: 12 }];
-    XLSX.utils.book_append_sheet(wb, wsOut, "Stock Out");
-
-    if (failed.length > 0) {
-      const wsErr = XLSX.utils.aoa_to_sheet([
-        ["Row", "Item Code", "Item Description", "Quantity", "Error"],
-        ...failed.map((r) => [
-          r.row.rowNum,
+      autoTable(doc, {
+        startY: finalY + 36,
+        head: [["Row", "Item Code", "Quantity", "Error"]],
+        body: failedRows.map((r) => [
+          String(r.row.rowNum),
           r.row.item_code,
-          r.row.item_description,
-          r.row.quantity,
-          r.message ?? "",
+          `${r.row.quantity > 0 ? "+" : ""}${r.row.quantity}`,
+          r.message ?? "Failed",
         ]),
-      ]);
-      wsErr["!cols"] = [{ wch: 6 }, { wch: 22 }, { wch: 36 }, { wch: 10 }, { wch: 40 }];
-      XLSX.utils.book_append_sheet(wb, wsErr, "Failed");
+        styles: { fontSize: 8, cellPadding: 4 },
+        headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255] },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 90, fontStyle: "bold" },
+          2: { cellWidth: 50, halign: "right" },
+          3: { cellWidth: "auto" },
+        },
+        margin: { left: 32, right: 32 },
+      });
+    }
+
+    // Footer page numbers
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        pageWidth - 32,
+        doc.internal.pageSize.getHeight() - 16,
+        { align: "right" }
+      );
+      doc.text("SpareLube Stock Control", 32, doc.internal.pageSize.getHeight() - 16);
     }
 
     const safeName = fileName.replace(/\.[^.]+$/, "") || "reconciliation";
-    XLSX.writeFile(wb, `${safeName}_report.xlsx`);
-    toast.success("Report downloaded");
+    doc.save(`${safeName}_report.pdf`);
+    toast.success("PDF report downloaded");
   }, [resultRows, fileName]);
+
 
   return (
     <div className="space-y-5 md:space-y-6">
