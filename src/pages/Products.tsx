@@ -42,6 +42,19 @@ interface ParsedRow {
 export default function Products() {
   const { data: products, isLoading } = useProducts();
   const addProducts = useAddProducts();
+  const deleteProduct = useDeleteProduct();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; item_code: string } | null>(null);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteProduct.mutateAsync(deleteTarget.id);
+      toast.success(`Deleted ${deleteTarget.item_code}`);
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete product");
+    }
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<ParsedRow[] | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
