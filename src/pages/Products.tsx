@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import { useProducts, useAddProducts } from "@/hooks/useStockData";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -11,6 +11,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 interface ParsedRow {
@@ -25,6 +35,34 @@ export default function Products() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<ParsedRow[] | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newProduct, setNewProduct] = useState({ item_code: "", item_description: "", category: "" });
+
+  const handleAddProduct = async () => {
+    const code = newProduct.item_code.trim();
+    if (!code) {
+      toast.error("Item Code is required");
+      return;
+    }
+    if (products?.some((p) => p.item_code === code)) {
+      toast.error(`Item Code "${code}" already exists`);
+      return;
+    }
+    try {
+      await addProducts.mutateAsync([
+        {
+          item_code: code,
+          item_description: newProduct.item_description.trim() || null,
+          category: newProduct.category.trim() || null,
+        },
+      ]);
+      toast.success("Product added");
+      setNewProduct({ item_code: "", item_description: "", category: "" });
+      setAddOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add product");
+    }
+  };
 
   const parseExcel = (file: File) => {
     const reader = new FileReader();
@@ -133,7 +171,7 @@ export default function Products() {
           </p>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Products</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <input
             ref={fileInputRef}
             type="file"
@@ -152,8 +190,61 @@ export default function Products() {
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Select Excel File
           </Button>
+          <Button className="w-full sm:w-auto" onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Product
+          </Button>
         </div>
       </div>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+            <DialogDescription>
+              Create a single product. Item Code must be unique.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="np-code">Item Code *</Label>
+              <Input
+                id="np-code"
+                value={newProduct.item_code}
+                onChange={(e) => setNewProduct({ ...newProduct, item_code: e.target.value })}
+                placeholder="e.g. SL-1001"
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="np-desc">Description</Label>
+              <Input
+                id="np-desc"
+                value={newProduct.item_description}
+                onChange={(e) => setNewProduct({ ...newProduct, item_description: e.target.value })}
+                placeholder="Product description"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="np-cat">Category</Label>
+              <Input
+                id="np-cat"
+                value={newProduct.category}
+                onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                placeholder="e.g. Lubricants"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddProduct} disabled={addProducts.isPending}>
+              {addProducts.isPending ? "Adding..." : "Add Product"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Upload preview */}
       {errors.length > 0 && (
