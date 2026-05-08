@@ -1,7 +1,17 @@
 import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
-import { useProducts, useAddProducts } from "@/hooks/useStockData";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Plus } from "lucide-react";
+import { useProducts, useAddProducts, useDeleteProduct } from "@/hooks/useStockData";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Plus, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Table,
