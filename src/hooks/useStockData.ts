@@ -78,6 +78,28 @@ export function useAddProducts() {
   });
 }
 
+export function useDeleteProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { count, error: countError } = await supabase
+        .from("stock_movements")
+        .select("id", { count: "exact", head: true })
+        .eq("product_id", id);
+      if (countError) throw countError;
+      if ((count ?? 0) > 0) {
+        throw new Error("Cannot delete: this product has stock movements recorded against it.");
+      }
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock_levels"] });
+    },
+  });
+}
+
 export function useAddStockMovement() {
   const queryClient = useQueryClient();
   return useMutation({
