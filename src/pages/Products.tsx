@@ -1,7 +1,17 @@
 import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
-import { useProducts, useAddProducts } from "@/hooks/useStockData";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Plus } from "lucide-react";
+import { useProducts, useAddProducts, useDeleteProduct } from "@/hooks/useStockData";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Plus, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -32,6 +42,19 @@ interface ParsedRow {
 export default function Products() {
   const { data: products, isLoading } = useProducts();
   const addProducts = useAddProducts();
+  const deleteProduct = useDeleteProduct();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; item_code: string } | null>(null);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteProduct.mutateAsync(deleteTarget.id);
+      toast.success(`Deleted ${deleteTarget.item_code}`);
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete product");
+    }
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<ParsedRow[] | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -343,6 +366,9 @@ export default function Products() {
                   <TableHead className="text-[11px] uppercase tracking-[0.18em]">
                     Created
                   </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em] text-right w-20">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -354,6 +380,17 @@ export default function Products() {
                     <TableCell className="text-sm text-muted-foreground font-mono">
                       {new Date(p.created_at).toLocaleDateString()}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteTarget({ id: p.id, item_code: p.item_code })}
+                        aria-label={`Delete ${p.item_code}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -361,6 +398,27 @@ export default function Products() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-mono font-medium">{deleteTarget?.item_code}</span>. Products with stock movements cannot be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteProduct.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteProduct.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
