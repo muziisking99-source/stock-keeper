@@ -35,6 +35,34 @@ export default function Products() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<ParsedRow[] | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newProduct, setNewProduct] = useState({ item_code: "", item_description: "", category: "" });
+
+  const handleAddProduct = async () => {
+    const code = newProduct.item_code.trim();
+    if (!code) {
+      toast.error("Item Code is required");
+      return;
+    }
+    if (products?.some((p) => p.item_code === code)) {
+      toast.error(`Item Code "${code}" already exists`);
+      return;
+    }
+    try {
+      await addProducts.mutateAsync([
+        {
+          item_code: code,
+          item_description: newProduct.item_description.trim() || null,
+          category: newProduct.category.trim() || null,
+        },
+      ]);
+      toast.success("Product added");
+      setNewProduct({ item_code: "", item_description: "", category: "" });
+      setAddOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add product");
+    }
+  };
 
   const parseExcel = (file: File) => {
     const reader = new FileReader();
