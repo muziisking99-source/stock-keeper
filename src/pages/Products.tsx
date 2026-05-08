@@ -366,6 +366,9 @@ export default function Products() {
                   <TableHead className="text-[11px] uppercase tracking-[0.18em]">
                     Created
                   </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-[0.18em] text-right w-20">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -377,6 +380,17 @@ export default function Products() {
                     <TableCell className="text-sm text-muted-foreground font-mono">
                       {new Date(p.created_at).toLocaleDateString()}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteTarget({ id: p.id, item_code: p.item_code })}
+                        aria-label={`Delete ${p.item_code}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -384,6 +398,27 @@ export default function Products() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-mono font-medium">{deleteTarget?.item_code}</span>. Products with stock movements cannot be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteProduct.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteProduct.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
