@@ -51,7 +51,7 @@ export function useStockMovements() {
         .from("stock_movements")
         .select("*, products(item_code, item_description), warehouses(warehouse_name)")
         .order("movement_date", { ascending: false })
-        .limit(200);
+        .limit(1000);
       if (error) throw error;
       return data;
     },
