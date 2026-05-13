@@ -26,7 +26,7 @@ import { groupByBatch } from "@/lib/groupMovements";
 export default function Receiving() {
   const { data: products } = useProducts();
   const { data: warehouses } = useWarehouses();
-  const { data: movements, isLoading } = useStockMovements();
+  const { data: movements, isLoading } = useStockMovements(["IN"]);
   const addMovement = useAddStockMovement();
 
   const [open, setOpen] = useState(false);
