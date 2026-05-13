@@ -43,15 +43,17 @@ export function useStockLevels() {
   });
 }
 
-export function useStockMovements() {
+export function useStockMovements(types?: string[]) {
   return useQuery({
-    queryKey: ["stock_movements"],
+    queryKey: ["stock_movements", types ?? "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("stock_movements")
         .select("*, products(item_code, item_description), warehouses(warehouse_name)")
         .order("movement_date", { ascending: false })
-        .limit(1000);
+        .limit(5000);
+      if (types && types.length) q = q.in("movement_type", types);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
