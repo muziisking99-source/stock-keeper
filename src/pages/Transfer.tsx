@@ -27,7 +27,7 @@ import { groupByBatch } from "@/lib/groupMovements";
 export default function Transfer() {
   const { data: products } = useProducts();
   const { data: warehouses } = useWarehouses();
-  const { data: movements, isLoading } = useStockMovements();
+  const { data: movements, isLoading } = useStockMovements(["TRANSFER_IN","TRANSFER_OUT"]);
   const { data: stockLevels } = useStockLevels();
   const transferStock = useTransferStock();
 
