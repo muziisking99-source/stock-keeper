@@ -12,6 +12,7 @@ import {
   LogOut,
   FileUp,
   ClipboardMinus,
+  ClipboardCheck,
   Menu,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -24,7 +25,8 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/current-stock", label: "Current Stock", icon: BarChart3 },
   { to: "/stock-upload", label: "Stock Upload", icon: FileUp },
-  { to: "/sales-clearance", label: "Stock Reconciliation", icon: ClipboardMinus },
+  { to: "/stock-recon", label: "Stock Reconciliation", icon: ClipboardCheck },
+  { to: "/sales-clearance", label: "Sales Clearance", icon: ClipboardMinus },
 ];
 
 const movementSubItems = [
