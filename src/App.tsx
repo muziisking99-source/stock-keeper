@@ -9,6 +9,7 @@ import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import CurrentStock from "@/pages/CurrentStock";
 import StockUpload from "@/pages/StockUpload";
+import StockRecon from "@/pages/StockRecon";
 import SalesClearance from "@/pages/SalesClearance";
 import Receiving from "@/pages/Receiving";
 import Issuing from "@/pages/Issuing";
@@ -74,6 +75,7 @@ const App = () => (
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/current-stock" element={<CurrentStock />} />
                       <Route path="/stock-upload" element={<StockUpload />} />
+                      <Route path="/stock-recon" element={<StockRecon />} />
                       <Route path="/sales-clearance" element={<SalesClearance />} />
                       <Route path="/movements" element={<Navigate to="/movements/receiving" replace />} />
                       <Route path="/movements/receiving" element={<Receiving />} />
