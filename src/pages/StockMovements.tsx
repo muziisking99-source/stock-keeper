@@ -343,8 +343,8 @@ export default function StockMovements() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {movements.map((m) => (
-                  <TableRow key={m.id} className="hover:bg-muted/40">
+                {movements.filter((m: any) => typeFilter === "all" || m.movement_type === typeFilter).map((m) => (
+                  <TableRow key={m.id} className={`hover:bg-muted/40 ${m.movement_type === "CREDIT" ? "border-l-4 border-l-blue-500/60" : ""}`}>
                     <TableCell className="text-sm font-mono text-muted-foreground">
                       {new Date(m.movement_date).toLocaleDateString()}
                     </TableCell>
