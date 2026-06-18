@@ -36,7 +36,7 @@ export function useStockLevels() {
       const { data, error } = await supabase
         .from("stock_levels")
         .select("*")
-        .gt("current_stock", 0);
+        .neq("current_stock", 0);
       if (error) throw error;
       return data;
     },
