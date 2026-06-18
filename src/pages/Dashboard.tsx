@@ -1,5 +1,5 @@
-import { useStockLevels, useProducts, useWarehouses } from "@/hooks/useStockData";
-import { Package, Warehouse, AlertTriangle } from "lucide-react";
+import { useStockLevels, useProducts, useWarehouses, useStockMovements } from "@/hooks/useStockData";
+import { Package, Warehouse, AlertTriangle, Undo2, TrendingDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,11 +13,19 @@ export default function Dashboard() {
   const { data: stockLevels, isLoading } = useStockLevels();
   const { data: products } = useProducts();
   const { data: warehouses } = useWarehouses();
+  const { data: creditMovements } = useStockMovements(["CREDIT"]);
 
   const totalProducts = products?.length ?? 0;
   const totalWarehouses = warehouses?.length ?? 0;
   const lowStockCount =
     stockLevels?.filter((s) => (s.current_stock as number) > 0 && (s.current_stock as number) <= 5).length ?? 0;
+  const negativeStockCount =
+    stockLevels?.filter((s: any) => (s.current_stock as number) < 0 && s.allow_negative_stock).length ?? 0;
+
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const creditsLast7 = (creditMovements ?? [])
+    .filter((m: any) => new Date(m.movement_date).getTime() >= sevenDaysAgo)
+    .reduce((s: number, m: any) => s + (m.quantity ?? 0), 0);
 
   // Group stock levels by product
   const productMap = new Map<string, typeof stockLevels>();
@@ -26,6 +34,7 @@ export default function Dashboard() {
     if (!productMap.has(key)) productMap.set(key, []);
     productMap.get(key)!.push(sl);
   });
+
 
   return (
     <div className="space-y-5 md:space-y-6">
