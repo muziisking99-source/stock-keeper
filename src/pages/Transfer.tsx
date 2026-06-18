@@ -63,10 +63,12 @@ export default function Transfer() {
 
   const handleSubmit = async () => {
     if (!isValid) return;
+    const fromWh: any = warehouses?.find((w: any) => w.id === fromWarehouseId);
+    const allowNeg = !!fromWh?.allow_negative_stock;
     for (const line of lines) {
       const stock = getStock(line.productId, fromWarehouseId);
       const qty = parseInt(line.quantity);
-      if (qty > stock) {
+      if (qty > stock && !allowNeg) {
         const product = products?.find((p) => p.id === line.productId);
         toast.error(`Insufficient stock for ${product?.item_code || "item"}. Available: ${stock}`);
         return;
