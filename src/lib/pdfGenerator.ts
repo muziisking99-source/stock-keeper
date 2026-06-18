@@ -27,13 +27,23 @@ const themes = {
     reportLabel: "TRANSFER REPORT",
     stripe: [239, 246, 255] as [number, number, number],
   },
+  credit: {
+    primary: [37, 99, 235] as [number, number, number],      // Strong blue
+    secondary: [219, 234, 254] as [number, number, number],
+    accent: [59, 130, 246] as [number, number, number],
+    label: "CREDIT NOTE",
+    reportLabel: "CREDITS REPORT",
+    stripe: [239, 246, 255] as [number, number, number],
+  },
 };
 
 type ThemeKey = keyof typeof themes;
 
 function getTheme(title: string): (typeof themes)[ThemeKey] {
-  if (title.toLowerCase().includes("receiv")) return themes.receiving;
-  if (title.toLowerCase().includes("issue") || title.toLowerCase().includes("issuing")) return themes.issuing;
+  const t = title.toLowerCase();
+  if (t.includes("credit")) return themes.credit;
+  if (t.includes("receiv")) return themes.receiving;
+  if (t.includes("issue") || t.includes("issuing")) return themes.issuing;
   return themes.transfer;
 }
 
