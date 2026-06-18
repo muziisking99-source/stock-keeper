@@ -14,6 +14,7 @@ import SalesClearance from "@/pages/SalesClearance";
 import Receiving from "@/pages/Receiving";
 import Issuing from "@/pages/Issuing";
 import Transfer from "@/pages/Transfer";
+import Credits from "@/pages/Credits";
 import Products from "@/pages/Products";
 import Warehouses from "@/pages/Warehouses";
 import Login from "@/pages/Login";
