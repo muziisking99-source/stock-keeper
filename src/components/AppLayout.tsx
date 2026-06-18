@@ -203,6 +203,12 @@ function SidebarBody({
           onNavigate={onNavigate}
         />
 
+        <NavItem
+          {...creditNavItem}
+          isActive={currentPath === creditNavItem.to}
+          onNavigate={onNavigate}
+        />
+
         <CollapsibleGroup
           label="Master Data"
           icon={Package}
@@ -212,6 +218,7 @@ function SidebarBody({
           currentPath={currentPath}
           onNavigate={onNavigate}
         />
+
       </nav>
       <div className="border-t border-sidebar-border/60 px-4 py-3">
         <button
