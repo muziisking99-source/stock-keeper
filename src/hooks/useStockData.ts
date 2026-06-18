@@ -113,10 +113,11 @@ export function useAddStockMovement() {
       reference_note?: string;
       batch_id?: string;
       movement_date?: string;
+      metadata?: Record<string, any>;
     }) => {
       const { data, error } = await supabase
         .from("stock_movements")
-        .insert(movement)
+        .insert(movement as any)
         .select()
         .single();
       if (error) throw error;
