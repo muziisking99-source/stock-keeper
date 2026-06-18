@@ -56,7 +56,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-2">
         <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-primary/10 via-card to-primary/5 p-4 sm:p-5 shadow-sm">
           <div className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-primary/15 blur-2xl" />
           <div className="flex items-center justify-between gap-3 mb-3">
