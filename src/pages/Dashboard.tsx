@@ -1,5 +1,5 @@
-import { useStockLevels, useProducts, useWarehouses } from "@/hooks/useStockData";
-import { Package, Warehouse, AlertTriangle } from "lucide-react";
+import { useStockLevels, useProducts, useWarehouses, useStockMovements } from "@/hooks/useStockData";
+import { Package, Warehouse, AlertTriangle, Undo2, TrendingDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,11 +13,19 @@ export default function Dashboard() {
   const { data: stockLevels, isLoading } = useStockLevels();
   const { data: products } = useProducts();
   const { data: warehouses } = useWarehouses();
+  const { data: creditMovements } = useStockMovements(["CREDIT"]);
 
   const totalProducts = products?.length ?? 0;
   const totalWarehouses = warehouses?.length ?? 0;
   const lowStockCount =
     stockLevels?.filter((s) => (s.current_stock as number) > 0 && (s.current_stock as number) <= 5).length ?? 0;
+  const negativeStockCount =
+    stockLevels?.filter((s: any) => (s.current_stock as number) < 0 && s.allow_negative_stock).length ?? 0;
+
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const creditsLast7 = (creditMovements ?? [])
+    .filter((m: any) => new Date(m.movement_date).getTime() >= sevenDaysAgo)
+    .reduce((s: number, m: any) => s + (m.quantity ?? 0), 0);
 
   // Group stock levels by product
   const productMap = new Map<string, typeof stockLevels>();
@@ -26,6 +34,7 @@ export default function Dashboard() {
     if (!productMap.has(key)) productMap.set(key, []);
     productMap.get(key)!.push(sl);
   });
+
 
   return (
     <div className="space-y-5 md:space-y-6">
@@ -47,7 +56,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-2">
         <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-primary/10 via-card to-primary/5 p-4 sm:p-5 shadow-sm">
           <div className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-primary/15 blur-2xl" />
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -116,7 +125,38 @@ export default function Dashboard() {
             Items between 1–5 units remaining across any warehouse.
           </p>
         </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-blue-500/10 via-card to-blue-400/5 p-4 sm:p-5 shadow-sm">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-blue-400/15 blur-2xl" />
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-300">
+                <Undo2 className="h-4 w-4" />
+              </div>
+              <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Credits (7d)</span>
+            </div>
+            <span className="rounded-full border border-blue-400/40 bg-blue-500/10 px-2 py-0.5 text-[10px] font-mono text-blue-700 dark:text-blue-100">Returns</span>
+          </div>
+          <p className="text-2xl sm:text-3xl md:text-4xl font-semibold font-mono">{creditsLast7}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Total units credited in the last 7 days.</p>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-destructive/10 via-card to-destructive/5 p-4 sm:p-5 shadow-sm">
+          <div className="pointer-events-none absolute -left-8 -bottom-16 h-32 w-32 rounded-full bg-destructive/15 blur-2xl" />
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-destructive/15 text-destructive">
+                <TrendingDown className="h-4 w-4" />
+              </div>
+              <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Negative Stock</span>
+            </div>
+            <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[10px] font-mono text-destructive">Alert</span>
+          </div>
+          <p className="text-2xl sm:text-3xl md:text-4xl font-semibold font-mono text-destructive">{negativeStockCount}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Items below zero in warehouses that permit it.</p>
+        </div>
       </div>
+
 
       {/* Stock table */}
       <div className="rounded-2xl border border-border/70 bg-card/95 shadow-sm">

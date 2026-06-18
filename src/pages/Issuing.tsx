@@ -59,10 +59,12 @@ export default function Issuing() {
 
   const handleSubmit = async () => {
     if (!isValid) return;
+    const wh: any = warehouses?.find((w: any) => w.id === warehouseId);
+    const allowNeg = !!wh?.allow_negative_stock;
     for (const line of lines) {
       const stock = getStock(line.productId, warehouseId);
       const qty = parseInt(line.quantity);
-      if (qty > stock) {
+      if (qty > stock && !allowNeg) {
         const product = products?.find((p) => p.id === line.productId);
         toast.error(`Insufficient stock for ${product?.item_code || "item"}. Available: ${stock}`);
         return;
@@ -155,7 +157,9 @@ export default function Issuing() {
                     <SelectTrigger className="bg-background"><SelectValue placeholder="Select warehouse" /></SelectTrigger>
                     <SelectContent>
                       {warehouses?.map((w: any) => (
-                        <SelectItem key={w.id} value={w.id}>{w.warehouse_name}</SelectItem>
+                        <SelectItem key={w.id} value={w.id}>
+                          {w.warehouse_name}{w.allow_negative_stock ? "  ⚠ allows negative" : ""}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

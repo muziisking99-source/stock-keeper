@@ -13,6 +13,7 @@ import {
   FileUp,
   ClipboardMinus,
   ClipboardCheck,
+  Undo2,
   Menu,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -28,6 +29,8 @@ const navItems = [
   { to: "/stock-recon", label: "Stock Reconciliation", icon: ClipboardCheck },
   { to: "/sales-clearance", label: "Sales Clearance", icon: ClipboardMinus },
 ];
+
+const creditNavItem = { to: "/credits", label: "Credits", icon: Undo2 };
 
 const movementSubItems = [
   { to: "/movements/receiving", label: "Receiving", icon: ArrowDownToLine },
@@ -200,6 +203,12 @@ function SidebarBody({
           onNavigate={onNavigate}
         />
 
+        <NavItem
+          {...creditNavItem}
+          isActive={currentPath === creditNavItem.to}
+          onNavigate={onNavigate}
+        />
+
         <CollapsibleGroup
           label="Master Data"
           icon={Package}
@@ -209,6 +218,7 @@ function SidebarBody({
           currentPath={currentPath}
           onNavigate={onNavigate}
         />
+
       </nav>
       <div className="border-t border-sidebar-border/60 px-4 py-3">
         <button

@@ -36,7 +36,7 @@ export function useStockLevels() {
       const { data, error } = await supabase
         .from("stock_levels")
         .select("*")
-        .gt("current_stock", 0);
+        .neq("current_stock", 0);
       if (error) throw error;
       return data;
     },
@@ -113,10 +113,11 @@ export function useAddStockMovement() {
       reference_note?: string;
       batch_id?: string;
       movement_date?: string;
+      metadata?: Record<string, any>;
     }) => {
       const { data, error } = await supabase
         .from("stock_movements")
-        .insert(movement)
+        .insert(movement as any)
         .select()
         .single();
       if (error) throw error;
@@ -176,10 +177,10 @@ export function useTransferStock() {
 export function useAddWarehouse() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { warehouse_name: string }) => {
+    mutationFn: async (payload: { warehouse_name: string; allow_negative_stock?: boolean }) => {
       const { data, error } = await supabase
         .from("warehouses")
-        .insert(payload)
+        .insert(payload as any)
         .select()
         .single();
       if (error) throw error;
@@ -195,11 +196,12 @@ export function useAddWarehouse() {
 export function useUpdateWarehouse() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { id: string; warehouse_name: string }) => {
+    mutationFn: async (payload: { id: string; warehouse_name?: string; allow_negative_stock?: boolean }) => {
+      const { id, ...rest } = payload;
       const { data, error } = await supabase
         .from("warehouses")
-        .update({ warehouse_name: payload.warehouse_name })
-        .eq("id", payload.id)
+        .update(rest as any)
+        .eq("id", id)
         .select()
         .single();
       if (error) throw error;

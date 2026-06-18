@@ -67,6 +67,7 @@ export type Database = {
           batch_id: string | null
           created_at: string
           id: string
+          metadata: Json
           movement_date: string
           movement_type: string
           product_id: string
@@ -78,6 +79,7 @@ export type Database = {
           batch_id?: string | null
           created_at?: string
           id?: string
+          metadata?: Json
           movement_date?: string
           movement_type: string
           product_id: string
@@ -89,6 +91,7 @@ export type Database = {
           batch_id?: string | null
           created_at?: string
           id?: string
+          metadata?: Json
           movement_date?: string
           movement_type?: string
           product_id?: string
@@ -147,16 +150,19 @@ export type Database = {
       }
       warehouses: {
         Row: {
+          allow_negative_stock: boolean
           created_at: string
           id: string
           warehouse_name: string
         }
         Insert: {
+          allow_negative_stock?: boolean
           created_at?: string
           id?: string
           warehouse_name: string
         }
         Update: {
+          allow_negative_stock?: boolean
           created_at?: string
           id?: string
           warehouse_name?: string
@@ -167,6 +173,7 @@ export type Database = {
     Views: {
       stock_levels: {
         Row: {
+          allow_negative_stock: boolean | null
           category: string | null
           current_stock: number | null
           item_code: string | null

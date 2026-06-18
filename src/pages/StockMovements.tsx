@@ -63,6 +63,7 @@ export default function StockMovements() {
   const [toWarehouseId, setToWarehouseId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   const resetForm = () => {
     setProductId("");
@@ -162,6 +163,7 @@ export default function StockMovements() {
     OUT: "bg-stock-out/15 text-stock-out",
     TRANSFER_IN: "bg-stock-transfer/15 text-stock-transfer",
     TRANSFER_OUT: "bg-stock-transfer/15 text-stock-transfer",
+    CREDIT: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
   };
 
   const isFormValid =
@@ -292,7 +294,7 @@ export default function StockMovements() {
 
       {/* Movements history */}
       <div className="bg-card/95 border border-border/70 rounded-2xl shadow-sm">
-        <div className="px-5 py-4 border-b border-border/70 flex items-center justify-between gap-3">
+        <div className="px-5 py-4 border-b border-border/70 flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
               Recent Movements
@@ -301,6 +303,17 @@ export default function StockMovements() {
               Chronological log of every stock transaction.
             </p>
           </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[180px] h-9 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="IN">Receiving (IN)</SelectItem>
+              <SelectItem value="OUT">Issuing (OUT)</SelectItem>
+              <SelectItem value="TRANSFER_IN">Transfer In</SelectItem>
+              <SelectItem value="TRANSFER_OUT">Transfer Out</SelectItem>
+              <SelectItem value="CREDIT">Credits</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground text-sm">Loading movement history…</div>
@@ -330,8 +343,8 @@ export default function StockMovements() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {movements.map((m) => (
-                  <TableRow key={m.id} className="hover:bg-muted/40">
+                {movements.filter((m: any) => typeFilter === "all" || m.movement_type === typeFilter).map((m) => (
+                  <TableRow key={m.id} className={`hover:bg-muted/40 ${m.movement_type === "CREDIT" ? "border-l-4 border-l-blue-500/60" : ""}`}>
                     <TableCell className="text-sm font-mono text-muted-foreground">
                       {new Date(m.movement_date).toLocaleDateString()}
                     </TableCell>

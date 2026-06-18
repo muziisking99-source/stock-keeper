@@ -322,13 +322,14 @@ export default function CurrentStock() {
                 <div className="md:hidden divide-y divide-border/60">
                   {items.map((sl: any) => {
                     const stock = sl.current_stock ?? 0;
-                    const colorClass = stock <= 5 ? "text-stock-transfer" : "text-stock-in";
+                    const isNeg = stock < 0;
+                    const colorClass = isNeg ? "text-destructive" : stock <= 5 ? "text-stock-transfer" : "text-stock-in";
                     const k = rowKey(sl);
                     const isChecked = selected.has(k);
                     return (
                       <div
                         key={k}
-                        className={`flex items-start gap-3 p-3 ${isChecked ? "bg-primary/5" : ""}`}
+                        className={`flex items-start gap-3 p-3 ${isChecked ? "bg-primary/5" : ""} ${isNeg ? "bg-destructive/10" : ""}`}
                       >
                         <Checkbox
                           checked={isChecked}
@@ -339,7 +340,7 @@ export default function CurrentStock() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-mono text-sm font-semibold truncate">{sl.item_code}</span>
-                            <span className={`font-mono text-base font-bold tabular-nums ${colorClass}`}>{stock}</span>
+                            <span className={`font-mono text-base tabular-nums ${colorClass} ${isNeg ? "font-extrabold" : "font-bold"}`}>{stock}</span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                             {sl.item_description || "—"}
@@ -395,7 +396,8 @@ export default function CurrentStock() {
                     <tbody>
                       {items.map((sl: any) => {
                         const stock = sl.current_stock ?? 0;
-                        const colorClass = stock <= 5 ? "text-stock-transfer" : "text-stock-in";
+                        const isNeg = stock < 0;
+                        const colorClass = isNeg ? "text-destructive" : stock <= 5 ? "text-stock-transfer" : "text-stock-in";
                         const k = rowKey(sl);
                         const isChecked = selected.has(k);
                         return (
@@ -403,7 +405,7 @@ export default function CurrentStock() {
                             key={k}
                             className={`border-b border-border/60 last:border-b-0 hover:bg-muted/40 ${
                               isChecked ? "bg-primary/5" : ""
-                            }`}
+                            } ${isNeg ? "bg-destructive/10" : ""}`}
                           >
                             <td className="px-3 py-2">
                               <Checkbox
@@ -415,7 +417,7 @@ export default function CurrentStock() {
                             <td className="px-4 py-2 font-mono text-sm font-medium">{sl.item_code}</td>
                             <td className="px-4 py-2 text-sm">{sl.item_description || "—"}</td>
                             <td className="px-4 py-2 text-sm text-muted-foreground">{sl.category || "—"}</td>
-                            <td className={`px-4 py-2 text-sm font-mono text-right font-semibold ${colorClass}`}>{stock}</td>
+                            <td className={`px-4 py-2 text-sm font-mono text-right ${isNeg ? "font-extrabold" : "font-semibold"} ${colorClass}`}>{stock}</td>
                             <td className="px-2 py-2">
                               <Button
                                 variant="ghost"
