@@ -294,7 +294,7 @@ export default function StockMovements() {
 
       {/* Movements history */}
       <div className="bg-card/95 border border-border/70 rounded-2xl shadow-sm">
-        <div className="px-5 py-4 border-b border-border/70 flex items-center justify-between gap-3">
+        <div className="px-5 py-4 border-b border-border/70 flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">
               Recent Movements
@@ -303,6 +303,17 @@ export default function StockMovements() {
               Chronological log of every stock transaction.
             </p>
           </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[180px] h-9 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="IN">Receiving (IN)</SelectItem>
+              <SelectItem value="OUT">Issuing (OUT)</SelectItem>
+              <SelectItem value="TRANSFER_IN">Transfer In</SelectItem>
+              <SelectItem value="TRANSFER_OUT">Transfer Out</SelectItem>
+              <SelectItem value="CREDIT">Credits</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground text-sm">Loading movement history…</div>
