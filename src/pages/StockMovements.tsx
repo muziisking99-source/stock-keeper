@@ -162,6 +162,7 @@ export default function StockMovements() {
     OUT: "bg-stock-out/15 text-stock-out",
     TRANSFER_IN: "bg-stock-transfer/15 text-stock-transfer",
     TRANSFER_OUT: "bg-stock-transfer/15 text-stock-transfer",
+    CREDIT: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
   };
 
   const isFormValid =
