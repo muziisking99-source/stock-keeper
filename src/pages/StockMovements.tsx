@@ -63,6 +63,7 @@ export default function StockMovements() {
   const [toWarehouseId, setToWarehouseId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   const resetForm = () => {
     setProductId("");
