@@ -340,7 +340,7 @@ export default function CurrentStock() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-mono text-sm font-semibold truncate">{sl.item_code}</span>
-                            <span className={`font-mono text-base font-bold tabular-nums ${colorClass}`}>{stock}</span>
+                            <span className={`font-mono text-base tabular-nums ${colorClass} ${isNeg ? "font-extrabold" : "font-bold"}`}>{stock}</span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                             {sl.item_description || "—"}
