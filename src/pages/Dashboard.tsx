@@ -125,7 +125,38 @@ export default function Dashboard() {
             Items between 1–5 units remaining across any warehouse.
           </p>
         </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-blue-500/10 via-card to-blue-400/5 p-4 sm:p-5 shadow-sm">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-blue-400/15 blur-2xl" />
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-300">
+                <Undo2 className="h-4 w-4" />
+              </div>
+              <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Credits (7d)</span>
+            </div>
+            <span className="rounded-full border border-blue-400/40 bg-blue-500/10 px-2 py-0.5 text-[10px] font-mono text-blue-700 dark:text-blue-100">Returns</span>
+          </div>
+          <p className="text-2xl sm:text-3xl md:text-4xl font-semibold font-mono">{creditsLast7}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Total units credited in the last 7 days.</p>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-destructive/10 via-card to-destructive/5 p-4 sm:p-5 shadow-sm">
+          <div className="pointer-events-none absolute -left-8 -bottom-16 h-32 w-32 rounded-full bg-destructive/15 blur-2xl" />
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-destructive/15 text-destructive">
+                <TrendingDown className="h-4 w-4" />
+              </div>
+              <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Negative Stock</span>
+            </div>
+            <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[10px] font-mono text-destructive">Alert</span>
+          </div>
+          <p className="text-2xl sm:text-3xl md:text-4xl font-semibold font-mono text-destructive">{negativeStockCount}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Items below zero in warehouses that permit it.</p>
+        </div>
       </div>
+
 
       {/* Stock table */}
       <div className="rounded-2xl border border-border/70 bg-card/95 shadow-sm">
