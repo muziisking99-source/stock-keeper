@@ -82,6 +82,7 @@ const App = () => (
                       <Route path="/movements/receiving" element={<Receiving />} />
                       <Route path="/movements/issuing" element={<Issuing />} />
                       <Route path="/movements/transfer" element={<Transfer />} />
+                      <Route path="/credits" element={<Credits />} />
                       <Route path="/master-data" element={<Navigate to="/master-data/products" replace />} />
                       <Route path="/master-data/products" element={<Products />} />
                       <Route path="/master-data/warehouses" element={<Warehouses />} />
