@@ -13,6 +13,7 @@ import {
   FileUp,
   ClipboardMinus,
   ClipboardCheck,
+  Undo2,
   Menu,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -28,6 +29,8 @@ const navItems = [
   { to: "/stock-recon", label: "Stock Reconciliation", icon: ClipboardCheck },
   { to: "/sales-clearance", label: "Sales Clearance", icon: ClipboardMinus },
 ];
+
+const creditNavItem = { to: "/credits", label: "Credits", icon: Undo2 };
 
 const movementSubItems = [
   { to: "/movements/receiving", label: "Receiving", icon: ArrowDownToLine },
