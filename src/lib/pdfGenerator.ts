@@ -123,7 +123,7 @@ export function generateMovementReceipt(movement: any, title: string) {
   doc.text(movement.id, 24, boxY + 16);
 
   // Details table
-  const details = [
+  const details: [string, string][] = [
     ["Date", new Date(movement.movement_date).toLocaleDateString()],
     ["Item Code", movement.products?.item_code || "N/A"],
     ["Description", movement.products?.item_description || "N/A"],
@@ -132,6 +132,9 @@ export function generateMovementReceipt(movement: any, title: string) {
     ["Quantity", String(movement.quantity)],
     ["Reference", movement.reference_note || "—"],
   ];
+  if (movement?.metadata?.credit_reason) {
+    details.push(["Credit Reason", String(movement.metadata.credit_reason)]);
+  }
 
   autoTable(doc, {
     startY: boxY + 30,
