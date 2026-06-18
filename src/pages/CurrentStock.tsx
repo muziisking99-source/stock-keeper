@@ -322,7 +322,8 @@ export default function CurrentStock() {
                 <div className="md:hidden divide-y divide-border/60">
                   {items.map((sl: any) => {
                     const stock = sl.current_stock ?? 0;
-                    const colorClass = stock <= 5 ? "text-stock-transfer" : "text-stock-in";
+                    const isNeg = stock < 0;
+                    const colorClass = isNeg ? "text-destructive" : stock <= 5 ? "text-stock-transfer" : "text-stock-in";
                     const k = rowKey(sl);
                     const isChecked = selected.has(k);
                     return (
