@@ -157,7 +157,9 @@ export default function Issuing() {
                     <SelectTrigger className="bg-background"><SelectValue placeholder="Select warehouse" /></SelectTrigger>
                     <SelectContent>
                       {warehouses?.map((w: any) => (
-                        <SelectItem key={w.id} value={w.id}>{w.warehouse_name}</SelectItem>
+                        <SelectItem key={w.id} value={w.id}>
+                          {w.warehouse_name}{w.allow_negative_stock ? "  ⚠ allows negative" : ""}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
