@@ -329,7 +329,7 @@ export default function CurrentStock() {
                     return (
                       <div
                         key={k}
-                        className={`flex items-start gap-3 p-3 ${isChecked ? "bg-primary/5" : ""}`}
+                        className={`flex items-start gap-3 p-3 ${isChecked ? "bg-primary/5" : ""} ${isNeg ? "bg-destructive/10" : ""}`}
                       >
                         <Checkbox
                           checked={isChecked}
