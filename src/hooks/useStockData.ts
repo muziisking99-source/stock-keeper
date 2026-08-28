@@ -130,6 +130,85 @@ export function useAddStockMovement() {
   });
 }
 
+export function useUndoCreditBatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (batchId: string) => {
+      const isSingle = batchId.startsWith("_single_");
+      let movements: {
+        id: string;
+        product_id: string;
+        warehouse_id: string;
+        quantity: number;
+        products: { item_code: string } | null;
+      }[];
+
+      if (isSingle) {
+        const movementId = batchId.replace("_single_", "");
+        const { data, error } = await supabase
+          .from("stock_movements")
+          .select("id, product_id, warehouse_id, quantity, products(item_code)")
+          .eq("id", movementId)
+          .eq("movement_type", "CREDIT")
+          .single();
+        if (error) throw error;
+        if (!data) throw new Error("Credit not found");
+        movements = [data as any];
+      } else {
+        const { data, error } = await supabase
+          .from("stock_movements")
+          .select("id, product_id, warehouse_id, quantity, products(item_code)")
+          .eq("batch_id", batchId)
+          .eq("movement_type", "CREDIT");
+        if (error) throw error;
+        if (!data?.length) throw new Error("No credit movements found for this batch");
+        movements = data as any[];
+      }
+
+      const productIds = [...new Set(movements.map((m) => m.product_id))];
+      const { data: stockLevels, error: stockError } = await supabase
+        .from("stock_levels")
+        .select("product_id, warehouse_id, current_stock, allow_negative_stock")
+        .in("product_id", productIds);
+      if (stockError) throw stockError;
+
+      for (const movement of movements) {
+        const stock = stockLevels?.find(
+          (s) => s.product_id === movement.product_id && s.warehouse_id === movement.warehouse_id
+        );
+        const afterUndo = (stock?.current_stock ?? 0) - movement.quantity;
+        if (!stock?.allow_negative_stock && afterUndo < 0) {
+          const code = movement.products?.item_code ?? "item";
+          throw new Error(
+            `Cannot undo: ${code} would go negative (current ${stock?.current_stock ?? 0}, credit was ${movement.quantity})`
+          );
+        }
+      }
+
+      if (isSingle) {
+        const { error: deleteError } = await supabase
+          .from("stock_movements")
+          .delete()
+          .eq("id", movements[0].id);
+        if (deleteError) throw deleteError;
+      } else {
+        const { error: deleteError } = await supabase
+          .from("stock_movements")
+          .delete()
+          .eq("batch_id", batchId)
+          .eq("movement_type", "CREDIT");
+        if (deleteError) throw deleteError;
+      }
+
+      return movements.length;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stock_movements"] });
+      queryClient.invalidateQueries({ queryKey: ["stock_levels"] });
+    },
+  });
+}
+
 export function useTransferStock() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -15,6 +15,7 @@ import {
   ClipboardCheck,
   Undo2,
   Menu,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,7 +31,10 @@ const navItems = [
   { to: "/sales-clearance", label: "Sales Clearance", icon: ClipboardMinus },
 ];
 
-const creditNavItem = { to: "/credits", label: "Credits", icon: Undo2 };
+const creditSubItems = [
+  { to: "/credits", label: "Record Credit", icon: Undo2 },
+  { to: "/credits/import", label: "Import Credit Notes", icon: FileSpreadsheet },
+];
 
 const movementSubItems = [
   { to: "/movements/receiving", label: "Receiving", icon: ArrowDownToLine },
@@ -154,6 +158,7 @@ function SidebarBody({
 }) {
   const isMovementRoute = currentPath.startsWith("/movements");
   const isMasterDataRoute = currentPath.startsWith("/master-data");
+  const isCreditRoute = currentPath.startsWith("/credits");
 
   return (
     <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
@@ -203,9 +208,13 @@ function SidebarBody({
           onNavigate={onNavigate}
         />
 
-        <NavItem
-          {...creditNavItem}
-          isActive={currentPath === creditNavItem.to}
+        <CollapsibleGroup
+          label="Credits"
+          icon={Undo2}
+          items={creditSubItems}
+          isGroupActive={isCreditRoute}
+          defaultOpen={isCreditRoute}
+          currentPath={currentPath}
           onNavigate={onNavigate}
         />
 

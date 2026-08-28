@@ -15,6 +15,7 @@ import Receiving from "@/pages/Receiving";
 import Issuing from "@/pages/Issuing";
 import Transfer from "@/pages/Transfer";
 import Credits from "@/pages/Credits";
+import CreditNotesImport from "@/pages/CreditNotesImport";
 import Products from "@/pages/Products";
 import Warehouses from "@/pages/Warehouses";
 import Login from "@/pages/Login";
@@ -83,6 +84,7 @@ const App = () => (
                       <Route path="/movements/issuing" element={<Issuing />} />
                       <Route path="/movements/transfer" element={<Transfer />} />
                       <Route path="/credits" element={<Credits />} />
+                      <Route path="/credits/import" element={<CreditNotesImport />} />
                       <Route path="/master-data" element={<Navigate to="/master-data/products" replace />} />
                       <Route path="/master-data/products" element={<Products />} />
                       <Route path="/master-data/warehouses" element={<Warehouses />} />
