@@ -2,7 +2,6 @@ import { useState, useRef, useMemo, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X, Download, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useProducts, useWarehouses, useStockLevels, useAddStockMovement } from "@/hooks/useStockData";
 import { toast } from "sonner";
@@ -20,6 +19,8 @@ interface ReconRow {
 
 type State = "idle" | "parsed" | "uploading" | "done";
 
+const MAIN_WAREHOUSE_NAME = "Main Warehouse";
+
 export default function StockRecon() {
   const { data: products } = useProducts();
   const { data: warehouses } = useWarehouses();
@@ -27,20 +28,18 @@ export default function StockRecon() {
   const addMovement = useAddStockMovement();
 
   const fileRef = useRef<HTMLInputElement>(null);
-  const [warehouseId, setWarehouseId] = useState<string>("");
   const [rows, setRows] = useState<ReconRow[]>([]);
   const [state, setState] = useState<State>("idle");
   const [fileName, setFileName] = useState("");
   const [progress, setProgress] = useState(0);
 
-  // Default to "Main" warehouse if available
-  const defaultWarehouseId = useMemo(() => {
-    if (!warehouses?.length) return "";
-    const main = warehouses.find((w: any) => /main/i.test(w.warehouse_name));
-    return (main ?? warehouses[0]).id;
-  }, [warehouses]);
-
-  const effectiveWarehouseId = warehouseId || defaultWarehouseId;
+  const mainWarehouse = useMemo(
+    () =>
+      warehouses?.find(
+        (w: any) => (w.warehouse_name || "").trim().toLowerCase() === MAIN_WAREHOUSE_NAME.toLowerCase()
+      ),
+    [warehouses]
+  );
 
   const productMap = useMemo(() => {
     const m = new Map<string, { id: string; description: string | null }>();
@@ -50,21 +49,17 @@ export default function StockRecon() {
     return m;
   }, [products]);
 
-  const stockForWarehouse = useMemo(() => {
+  const totalSystemStock = useMemo(() => {
     const m = new Map<string, number>();
     stockLevels?.forEach((s: any) => {
-      if (s.warehouse_id === effectiveWarehouseId) m.set(s.product_id, s.current_stock ?? 0);
+      m.set(s.product_id, (m.get(s.product_id) ?? 0) + (s.current_stock ?? 0));
     });
     return m;
-  }, [stockLevels, effectiveWarehouseId]);
+  }, [stockLevels]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!effectiveWarehouseId) {
-      toast.error("Please select a warehouse first");
-      return;
-    }
     setFileName(file.name);
 
     const reader = new FileReader();
@@ -77,7 +72,7 @@ export default function StockRecon() {
       json.forEach((row, idx) => {
         const itemCode = String(row["Item Code"] ?? row["item_code"] ?? row["ItemCode"] ?? row["ITEM CODE"] ?? "").trim();
         const qtyRaw = row["Quantity"] ?? row["quantity"] ?? row["QTY"] ?? row["Qty"] ?? "";
-        const qty = parseInt(String(qtyRaw));
+        const qty = parseInt(String(qtyRaw).replace(/,/g, ""));
         if (!itemCode) return;
 
         const prod = productMap.get(itemCode.toLowerCase());
@@ -96,11 +91,10 @@ export default function StockRecon() {
           entry.error = "Invalid quantity";
         } else {
           entry.product_id = prod.id;
-          entry.system = stockForWarehouse.get(prod.id) ?? 0;
+          entry.system = totalSystemStock.get(prod.id) ?? 0;
           entry.diff = entry.uploaded - entry.system;
         }
 
-        // Dedupe by item code — keep last
         const key = itemCode.toLowerCase();
         const prev = seen.get(key);
         if (prev) {
@@ -123,6 +117,10 @@ export default function StockRecon() {
   const totalOut = changes.filter((r) => r.diff < 0).reduce((s, r) => s + Math.abs(r.diff), 0);
 
   const handleApply = async () => {
+    if (!mainWarehouse) {
+      toast.error(`"${MAIN_WAREHOUSE_NAME}" warehouse not found. Create it under Master Data before applying adjustments.`);
+      return;
+    }
     if (changes.length === 0) {
       toast.info("No differences to apply");
       return;
@@ -131,18 +129,20 @@ export default function StockRecon() {
     setProgress(0);
     const batchId = crypto.randomUUID();
     let done = 0;
+    let failed = 0;
 
     for (const r of changes) {
       try {
         await addMovement.mutateAsync({
           product_id: r.product_id!,
-          warehouse_id: effectiveWarehouseId,
+          warehouse_id: mainWarehouse.id,
           movement_type: r.diff > 0 ? "IN" : "OUT",
           quantity: Math.abs(r.diff),
-          reference_note: `Reconciliation from ${fileName}`,
+          reference_note: `Total stock reconciliation from ${fileName}`,
           batch_id: batchId,
         });
       } catch (err: any) {
+        failed++;
         toast.error(`${r.item_code}: ${err.message}`);
       }
       done++;
@@ -150,7 +150,9 @@ export default function StockRecon() {
     }
 
     setState("done");
-    toast.success(`Reconciled ${done} item${done === 1 ? "" : "s"}`);
+    const ok = changes.length - failed;
+    if (ok > 0) toast.success(`Reconciled ${ok} item${ok === 1 ? "" : "s"}`);
+    if (failed > 0) toast.error(`${failed} adjustment${failed === 1 ? "" : "s"} failed`);
   };
 
   const reset = () => {
@@ -174,10 +176,9 @@ export default function StockRecon() {
   }, []);
 
   const downloadDiffReport = useCallback(() => {
-    const wh = warehouses?.find((w: any) => w.id === effectiveWarehouseId);
     const wb = XLSX.utils.book_new();
     const data = [
-      ["Item Code", "Description", "System Qty", "Uploaded Qty", "Difference", "Action"],
+      ["Item Code", "Description", "Our System Total", "Invoicing System", "Difference", "Action"],
       ...rows.map((r) => [
         r.item_code,
         r.item_description ?? "",
@@ -188,11 +189,10 @@ export default function StockRecon() {
       ]),
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
-    ws["!cols"] = [{ wch: 20 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }];
+    ws["!cols"] = [{ wch: 20 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 10 }];
     XLSX.utils.book_append_sheet(wb, ws, "Reconciliation");
-    const safe = (wh?.warehouse_name ?? "warehouse").replace(/[^a-z0-9]+/gi, "_");
-    XLSX.writeFile(wb, `recon_${safe}_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }, [rows, warehouses, effectiveWarehouseId]);
+    XLSX.writeFile(wb, `recon_total_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }, [rows]);
 
   return (
     <div className="space-y-5 md:space-y-6">
@@ -201,7 +201,10 @@ export default function StockRecon() {
           <p className="text-[10px] sm:text-xs uppercase tracking-[0.22em] text-muted-foreground/70 font-mono mb-1">Reconcile</p>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Stock Reconciliation</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Upload a count for a warehouse to see the difference vs. system stock. Review, then apply adjustments as IN/OUT movements.
+            Upload stock totals from your invoicing system and compare them against{" "}
+            <span className="font-semibold text-foreground">total stock across all warehouses</span> in SpareLube.
+            Review differences, then apply adjustments as IN/OUT movements to{" "}
+            <span className="font-semibold text-foreground">{MAIN_WAREHOUSE_NAME}</span>.
           </p>
         </div>
         <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" onClick={downloadTemplate}>
@@ -210,34 +213,25 @@ export default function StockRecon() {
         </Button>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <label className="text-xs uppercase tracking-wider font-mono text-muted-foreground">Warehouse</label>
-        <Select
-          value={effectiveWarehouseId}
-          onValueChange={(v) => {
-            setWarehouseId(v);
-            if (state !== "idle") reset();
-          }}
-          disabled={state === "uploading"}
-        >
-          <SelectTrigger className="w-full sm:w-64 h-11">
-            <SelectValue placeholder="Select warehouse" />
-          </SelectTrigger>
-          <SelectContent>
-            {warehouses?.map((w: any) => (
-              <SelectItem key={w.id} value={w.id}>
-                {w.warehouse_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!mainWarehouse && warehouses && (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
+          <p className="font-semibold text-destructive flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" /> Missing warehouse for adjustments
+          </p>
+          <p className="text-muted-foreground mt-1">
+            No warehouse named "{MAIN_WAREHOUSE_NAME}" exists. You can still compare totals, but applying adjustments
+            requires this warehouse under Master Data.
+          </p>
+        </div>
+      )}
 
       {state === "idle" && (
         <label className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border/70 bg-muted/20 p-12 cursor-pointer hover:border-primary/50 hover:bg-muted/40 transition-all">
           <Upload className="h-10 w-10 text-muted-foreground/60" />
-          <span className="text-sm text-muted-foreground">Click to select an Excel file (.xlsx, .xls)</span>
-          <span className="text-xs text-muted-foreground/70 font-mono">Columns: Item Code, Quantity</span>
+          <span className="text-sm text-muted-foreground">Click to select an Excel file (.xlsx, .xls, .csv)</span>
+          <span className="text-xs text-muted-foreground/70 font-mono text-center px-4">
+            Columns: Item Code, Quantity — invoicing system totals per item
+          </span>
           <input
             ref={fileRef}
             type="file"
@@ -307,8 +301,8 @@ export default function StockRecon() {
                     <tr className="border-b border-border/60">
                       <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider font-mono">Item Code</th>
                       <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider">Description</th>
-                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">System</th>
-                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">Uploaded</th>
+                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">Our System</th>
+                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">Invoicing</th>
                       <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider font-mono">Diff</th>
                     </tr>
                   </thead>
@@ -362,7 +356,7 @@ export default function StockRecon() {
             {state === "parsed" && (
               <Button
                 onClick={handleApply}
-                disabled={changes.length === 0 || addMovement.isPending}
+                disabled={changes.length === 0 || addMovement.isPending || !mainWarehouse}
                 className="gap-2"
               >
                 <CheckCircle2 className="h-4 w-4" />
