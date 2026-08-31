@@ -544,10 +544,10 @@ export default function CurrentStock() {
           <AlertDialogHeader>
             <AlertDialogTitle>Clear stock for {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will create OUT movements that remove the full current stock
-              ({selectedTotalUnits} units total) for every selected row. You can
-              still see the history under Stock Movements. This cannot be undone
-              from this screen.
+              Each selected row is set to exactly zero — the live balance is
+              re-checked first, so nothing can go into minus (negative balances
+              are corrected back up to zero). History stays visible under Stock
+              Movements.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
