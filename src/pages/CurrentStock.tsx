@@ -20,9 +20,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { X, Trash2 } from "lucide-react";
+import { X, Trash2, ArrowRightLeft } from "lucide-react";
 import DeleteStockDialog from "@/components/DeleteStockDialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+// Reads the true live balance straight from movements (avoids stale cache
+// causing over-removal and negative balances).
+async function fetchLiveBalance(product_id: string, warehouse_id: string) {
+  const { data, error } = await supabase
+    .from("stock_movements")
+    .select("movement_type, quantity")
+    .eq("product_id", product_id)
+    .eq("warehouse_id", warehouse_id);
+  if (error) throw error;
+  return (data ?? []).reduce((sum: number, m: any) => {
+    if (["IN", "TRANSFER_IN", "CREDIT"].includes(m.movement_type)) return sum + m.quantity;
+    return sum - m.quantity;
+  }, 0);
+}
 
 type SortOption = "code-asc" | "code-desc" | "stock-high" | "stock-low" | "desc-asc";
 
