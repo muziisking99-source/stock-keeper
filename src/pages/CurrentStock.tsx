@@ -181,15 +181,19 @@ export default function CurrentStock() {
     let ok = 0;
     let fail = 0;
     for (const sl of selectedItems) {
-      const qty = sl.current_stock ?? 0;
-      if (qty <= 0) continue;
       try {
+        // Always zero out against the live balance so we never overshoot into minus.
+        const balance = await fetchLiveBalance(sl.product_id, sl.warehouse_id);
+        if (balance === 0) continue;
         await addMovement.mutateAsync({
           product_id: sl.product_id,
           warehouse_id: sl.warehouse_id,
-          movement_type: "OUT",
-          quantity: qty,
-          reference_note: "Bulk clear from Current Stock",
+          movement_type: balance > 0 ? "OUT" : "IN",
+          quantity: Math.abs(balance),
+          reference_note:
+            balance > 0
+              ? "Bulk clear from Current Stock (zeroed)"
+              : "Negative balance correction from Current Stock (zeroed)",
         });
         ok++;
       } catch (err: any) {
@@ -200,7 +204,57 @@ export default function CurrentStock() {
     setBulkRunning(false);
     setBulkOpen(false);
     setSelected(new Set());
-    if (ok > 0) toast.success(`Cleared stock for ${ok} item${ok === 1 ? "" : "s"}`);
+    if (ok > 0) toast.success(`Zeroed stock for ${ok} item${ok === 1 ? "" : "s"}`);
+    if (fail > 0) toast.error(`${fail} item${fail === 1 ? "" : "s"} failed`);
+  };
+
+  const runBulkMove = async () => {
+    if (selectedItems.length === 0 || !moveTo) return;
+    setMoveRunning(true);
+    const batch_id = crypto.randomUUID();
+    const destName =
+      (warehouses ?? []).find((w: any) => w.id === moveTo)?.warehouse_name ?? "warehouse";
+    let ok = 0;
+    let fail = 0;
+    let skipped = 0;
+    for (const sl of selectedItems) {
+      if (sl.warehouse_id === moveTo) {
+        skipped++;
+        continue;
+      }
+      try {
+        const balance = await fetchLiveBalance(sl.product_id, sl.warehouse_id);
+        if (balance <= 0) {
+          skipped++;
+          continue;
+        }
+        await addMovement.mutateAsync({
+          product_id: sl.product_id,
+          warehouse_id: sl.warehouse_id,
+          movement_type: "TRANSFER_OUT",
+          quantity: balance,
+          reference_note: `Bulk move to ${destName}`,
+          batch_id,
+        });
+        await addMovement.mutateAsync({
+          product_id: sl.product_id,
+          warehouse_id: moveTo,
+          movement_type: "TRANSFER_IN",
+          quantity: balance,
+          reference_note: `Bulk move from ${sl.warehouse_name}`,
+          batch_id,
+        });
+        ok++;
+      } catch (err: any) {
+        fail++;
+        toast.error(`${sl.item_code}: ${err.message ?? "Failed"}`);
+      }
+    }
+    setMoveRunning(false);
+    setMoveOpen(false);
+    setSelected(new Set());
+    if (ok > 0) toast.success(`Moved ${ok} item${ok === 1 ? "" : "s"} to ${destName}`);
+    if (skipped > 0) toast.info(`${skipped} item${skipped === 1 ? "" : "s"} skipped (no stock or same warehouse)`);
     if (fail > 0) toast.error(`${fail} item${fail === 1 ? "" : "s"} failed`);
   };
 
