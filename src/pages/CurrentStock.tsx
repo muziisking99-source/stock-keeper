@@ -20,9 +20,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { X, Trash2 } from "lucide-react";
+import { X, Trash2, ArrowRightLeft } from "lucide-react";
 import DeleteStockDialog from "@/components/DeleteStockDialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+// Reads the true live balance straight from movements (avoids stale cache
+// causing over-removal and negative balances).
+async function fetchLiveBalance(product_id: string, warehouse_id: string) {
+  const { data, error } = await supabase
+    .from("stock_movements")
+    .select("movement_type, quantity")
+    .eq("product_id", product_id)
+    .eq("warehouse_id", warehouse_id);
+  if (error) throw error;
+  return (data ?? []).reduce((sum: number, m: any) => {
+    if (["IN", "TRANSFER_IN", "CREDIT"].includes(m.movement_type)) return sum + m.quantity;
+    return sum - m.quantity;
+  }, 0);
+}
 
 type SortOption = "code-asc" | "code-desc" | "stock-high" | "stock-low" | "desc-asc";
 
@@ -52,6 +68,9 @@ export default function CurrentStock() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveTo, setMoveTo] = useState<string>("");
+  const [moveRunning, setMoveRunning] = useState(false);
 
   // Derive unique categories from stock data
   const categories = useMemo(() => {
@@ -162,15 +181,19 @@ export default function CurrentStock() {
     let ok = 0;
     let fail = 0;
     for (const sl of selectedItems) {
-      const qty = sl.current_stock ?? 0;
-      if (qty <= 0) continue;
       try {
+        // Always zero out against the live balance so we never overshoot into minus.
+        const balance = await fetchLiveBalance(sl.product_id, sl.warehouse_id);
+        if (balance === 0) continue;
         await addMovement.mutateAsync({
           product_id: sl.product_id,
           warehouse_id: sl.warehouse_id,
-          movement_type: "OUT",
-          quantity: qty,
-          reference_note: "Bulk clear from Current Stock",
+          movement_type: balance > 0 ? "OUT" : "IN",
+          quantity: Math.abs(balance),
+          reference_note:
+            balance > 0
+              ? "Bulk clear from Current Stock (zeroed)"
+              : "Negative balance correction from Current Stock (zeroed)",
         });
         ok++;
       } catch (err: any) {
@@ -181,7 +204,57 @@ export default function CurrentStock() {
     setBulkRunning(false);
     setBulkOpen(false);
     setSelected(new Set());
-    if (ok > 0) toast.success(`Cleared stock for ${ok} item${ok === 1 ? "" : "s"}`);
+    if (ok > 0) toast.success(`Zeroed stock for ${ok} item${ok === 1 ? "" : "s"}`);
+    if (fail > 0) toast.error(`${fail} item${fail === 1 ? "" : "s"} failed`);
+  };
+
+  const runBulkMove = async () => {
+    if (selectedItems.length === 0 || !moveTo) return;
+    setMoveRunning(true);
+    const batch_id = crypto.randomUUID();
+    const destName =
+      (warehouses ?? []).find((w: any) => w.id === moveTo)?.warehouse_name ?? "warehouse";
+    let ok = 0;
+    let fail = 0;
+    let skipped = 0;
+    for (const sl of selectedItems) {
+      if (sl.warehouse_id === moveTo) {
+        skipped++;
+        continue;
+      }
+      try {
+        const balance = await fetchLiveBalance(sl.product_id, sl.warehouse_id);
+        if (balance <= 0) {
+          skipped++;
+          continue;
+        }
+        await addMovement.mutateAsync({
+          product_id: sl.product_id,
+          warehouse_id: sl.warehouse_id,
+          movement_type: "TRANSFER_OUT",
+          quantity: balance,
+          reference_note: `Bulk move to ${destName}`,
+          batch_id,
+        });
+        await addMovement.mutateAsync({
+          product_id: sl.product_id,
+          warehouse_id: moveTo,
+          movement_type: "TRANSFER_IN",
+          quantity: balance,
+          reference_note: `Bulk move from ${sl.warehouse_name}`,
+          batch_id,
+        });
+        ok++;
+      } catch (err: any) {
+        fail++;
+        toast.error(`${sl.item_code}: ${err.message ?? "Failed"}`);
+      }
+    }
+    setMoveRunning(false);
+    setMoveOpen(false);
+    setSelected(new Set());
+    if (ok > 0) toast.success(`Moved ${ok} item${ok === 1 ? "" : "s"} to ${destName}`);
+    if (skipped > 0) toast.info(`${skipped} item${skipped === 1 ? "" : "s"} skipped (no stock or same warehouse)`);
     if (fail > 0) toast.error(`${fail} item${fail === 1 ? "" : "s"} failed`);
   };
 
@@ -270,6 +343,17 @@ export default function CurrentStock() {
               className="h-8 text-xs"
             >
               {allSelected ? "Unselect all" : "Select all"}
+            </Button>
+          )}
+          {selected.size > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setMoveTo(""); setMoveOpen(true); }}
+              className="h-8 text-xs gap-1"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+              Move {selected.size} item{selected.size === 1 ? "" : "s"}
             </Button>
           )}
           {selected.size > 0 && (
@@ -460,10 +544,10 @@ export default function CurrentStock() {
           <AlertDialogHeader>
             <AlertDialogTitle>Clear stock for {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will create OUT movements that remove the full current stock
-              ({selectedTotalUnits} units total) for every selected row. You can
-              still see the history under Stock Movements. This cannot be undone
-              from this screen.
+              Each selected row is set to exactly zero — the live balance is
+              re-checked first, so nothing can go into minus (negative balances
+              are corrected back up to zero). History stays visible under Stock
+              Movements.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -474,6 +558,45 @@ export default function CurrentStock() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {bulkRunning ? "Clearing…" : "Yes, clear stock"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={moveOpen} onOpenChange={(o) => !moveRunning && setMoveOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Move {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"} to another warehouse
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The full live balance of each selected row is transferred out of its
+              current warehouse and into the destination ({selectedTotalUnits} units
+              approx). Rows already in the destination or with no stock are skipped.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1 py-2">
+            <label className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">
+              Destination warehouse
+            </label>
+            <Select value={moveTo} onValueChange={setMoveTo}>
+              <SelectTrigger className="h-10 text-sm">
+                <SelectValue placeholder="Select warehouse…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(warehouses ?? []).map((w: any) => (
+                  <SelectItem key={w.id} value={w.id}>{w.warehouse_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={moveRunning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); runBulkMove(); }}
+              disabled={moveRunning || !moveTo}
+            >
+              {moveRunning ? "Moving…" : "Move stock"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
