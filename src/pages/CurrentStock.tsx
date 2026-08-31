@@ -347,6 +347,17 @@ export default function CurrentStock() {
           )}
           {selected.size > 0 && (
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setMoveTo(""); setMoveOpen(true); }}
+              className="h-8 text-xs gap-1"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+              Move {selected.size} item{selected.size === 1 ? "" : "s"}
+            </Button>
+          )}
+          {selected.size > 0 && (
+            <Button
               variant="destructive"
               size="sm"
               onClick={() => setBulkOpen(true)}
