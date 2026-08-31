@@ -68,6 +68,9 @@ export default function CurrentStock() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveTo, setMoveTo] = useState<string>("");
+  const [moveRunning, setMoveRunning] = useState(false);
 
   // Derive unique categories from stock data
   const categories = useMemo(() => {
