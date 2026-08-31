@@ -562,6 +562,45 @@ export default function CurrentStock() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={moveOpen} onOpenChange={(o) => !moveRunning && setMoveOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Move {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"} to another warehouse
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The full live balance of each selected row is transferred out of its
+              current warehouse and into the destination ({selectedTotalUnits} units
+              approx). Rows already in the destination or with no stock are skipped.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1 py-2">
+            <label className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">
+              Destination warehouse
+            </label>
+            <Select value={moveTo} onValueChange={setMoveTo}>
+              <SelectTrigger className="h-10 text-sm">
+                <SelectValue placeholder="Select warehouse…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(warehouses ?? []).map((w: any) => (
+                  <SelectItem key={w.id} value={w.id}>{w.warehouse_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={moveRunning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); runBulkMove(); }}
+              disabled={moveRunning || !moveTo}
+            >
+              {moveRunning ? "Moving…" : "Move stock"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
